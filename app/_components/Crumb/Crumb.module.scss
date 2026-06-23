@@ -1,0 +1,34 @@
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0 0 14px;
+  color: var(--text-mute);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+
+  a {
+    flex-shrink: 0;
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--red);
+    }
+  }
+
+  span:last-child {
+    display: block;
+    overflow: hidden;
+    min-width: 0;
+    color: var(--text-2);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.crumbActive {
+  color: var(--red) !important;
+}

@@ -1,0 +1,38 @@
+.playerWrapper {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: auto !important;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  background: #000;
+
+  flex-shrink: 0;
+}
+
+.gradient {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 62%;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.86));
+  pointer-events: none;
+}
+
+.mediaTitle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  display: -webkit-box;
+  overflow: hidden;
+  padding: 56px 14px 12px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.42;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}

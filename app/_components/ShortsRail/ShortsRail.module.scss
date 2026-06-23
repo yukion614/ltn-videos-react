@@ -1,0 +1,189 @@
+.shortsRow {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 0 10px;
+  scroll-padding-left: 16px;
+  cursor: grab;
+  // scroll-snap-type: x mandatory;
+  // scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// 拖曳中：游標變抓握、停掉慣性捲動、避免反白選取
+.dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+  user-select: none;
+
+  img,
+  a {
+    pointer-events: none;
+  }
+}
+
+.shortCard {
+  width: 150px;
+  flex: 0 0 auto;
+  color: inherit;
+  scroll-snap-align: start;
+}
+
+.cardLink {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.shortMedia {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+  overflow: hidden;
+  aspect-ratio: 9 / 16;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--thumb-a), var(--thumb-b));
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(150deg, rgba(255, 255, 255, 0.22), transparent 38%),
+      repeating-linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.1) 0 2px,
+        transparent 2px 18px
+      );
+  }
+
+  :global(.react-player__preview) {
+    border-radius: inherit;
+    background-position: center;
+    background-size: cover;
+  }
+
+  :global(.react-player__shadow) {
+    width: 52px;
+    height: 52px;
+    background: rgba(226, 35, 26, 0.94);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  :global(.react-player__play-icon) {
+    border-width: 12px 0 12px 19px;
+    margin-left: 5px;
+  }
+}
+
+.poster {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-position: center;
+  background-size: cover;
+}
+
+.playerLoading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: #111;
+}
+
+.player {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: transparent; // 影片畫面出現前讓底下的封面透出來
+
+  :global(iframe),
+  :global(video) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.playerLoading {
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.title {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 7px;
+  padding: 0 2px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.views {
+  display: block;
+  margin-top: 4px;
+  padding: 0 2px;
+  color: var(--text-mute);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.tone0 {
+  --thumb-a: #1d3557;
+  --thumb-b: #e63946;
+}
+
+.tone1 {
+  --thumb-a: #4a5568;
+  --thumb-b: #e2231a;
+}
+
+.tone2 {
+  --thumb-a: #164e63;
+  --thumb-b: #f59e0b;
+}
+
+.tone3 {
+  --thumb-a: #2f3a4a;
+  --thumb-b: #22a06b;
+}
+
+.tone4 {
+  --thumb-a: #6b2d5c;
+  --thumb-b: #e85d04;
+}
+
+.tone5 {
+  --thumb-a: #263238;
+  --thumb-b: #3b82f6;
+}
+
+.tone6 {
+  --thumb-a: #3d2c2e;
+  --thumb-b: #d90429;
+}
+
+.tone7 {
+  --thumb-a: #1f2937;
+  --thumb-b: #ffd400;
+}
+
+@media (min-width: 920px) {
+  .shortCard {
+    width: 168px;
+  }
+}
