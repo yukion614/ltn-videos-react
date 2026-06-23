@@ -151,8 +151,9 @@ export default function Navbar() {
             )}
           </button>
 
-          <button
-            type="button"
+          <a
+            href="https://www.facebook.com/m.ltn.tw"
+            target="_blank"
             className={`${styles.navIcon} ${styles.icFacebook}`}
             aria-label="Facebook"
           >
@@ -162,10 +163,12 @@ export default function Navbar() {
                 fill="currentColor"
               ></path>
             </svg>
-          </button>
-
-          <button
-            type="button"
+          </a>
+          {/* yt */}
+          <a
+            href="https://www.youtube.com/@LtnTw"
+            target="_blank"
+            rel="noopener noreferrer"
             className={`${styles.navIcon} ${styles.icYoutube}`}
             aria-label="Youtube"
           >
@@ -175,7 +178,7 @@ export default function Navbar() {
                 fill="currentColor"
               ></path>
             </svg>
-          </button>
+          </a>
         </div>
       </div>
       <div
