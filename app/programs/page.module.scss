@@ -7,7 +7,7 @@
 }
 
 .wrap {
-  width: min(100% - 32px, 1180px);
+  width: min(100% - var(--container-gutter), var(--container-max));
   margin: 0 auto;
 }
 
@@ -254,7 +254,7 @@
   }
 
   .wrap {
-    width: min(100% - 24px, 1180px);
+    width: min(100% - var(--container-gutter-mobile), var(--container-max));
   }
 
   .sectionHeader {

@@ -6,7 +6,7 @@
 }
 
 .wrap {
-  width: min(100% - 32px, 1180px);
+  width: min(100% - var(--container-gutter), var(--container-max));
   margin: 0 auto;
 }
 
@@ -18,7 +18,7 @@
 .programTabs {
   display: flex;
   gap: 4px;
-  width: min(100% - 24px, 1180px);
+  width: min(100% - var(--container-gutter-mobile), var(--container-max));
   margin: 0 auto;
   overflow-x: auto;
   padding: 10px 0;
@@ -436,7 +436,7 @@
 
 @media (max-width: 759px) {
   .wrap {
-    width: min(100% - 24px, 1180px);
+    width: min(100% - var(--container-gutter-mobile), var(--container-max));
   }
 
   .crumbWrap {

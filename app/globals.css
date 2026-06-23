@@ -11,12 +11,36 @@
 
   --marqueeHeight: 40px;
 
-  --font-size-body: 20px;
-  --font-size-title: 18px;
+  /* ── 字級系統：依官網 video.ltn.com.tw 抽取 ───────────────── */
+  /* 分類大標（label）：26px / bold / line-height 2.2rem */
+  --fs-section-label: 26px;
+  --lh-section-label: 2.2rem;
+  /* 首頁右側主標（Vtitle）：24px / bold / 1.4 */
+  --fs-lead-title: 24px;
+  --lh-lead-title: 1.4;
+  /* 事件大圖、直播標題：20px / 1.5 */
+  --fs-feature-title: 20px;
+  --lh-feature-title: 1.5;
+  /* 一般卡片 / 政治風向球 / 新聞線標題：18px / 1.4 */
+  --fs-card-title: 18px;
+  --lh-card-title: 1.4;
+  /* 主選單 L1 / 輪播標題 / 國會列表：17px / 1.3 */
+  --fs-nav: 17px;
+  --lh-nav: 1.3;
+  /* 麵包屑 / 更多連結：16px */
+  --fs-link: 16px;
+  /* 頁尾版權 / 註記：13px */
+  --fs-caption: 13px;
+  /* 官網 body 基準行高 */
+  --lh-base: 1.3;
+
+  /* ── 既有別名（對齊官網數值，向後相容） ───────────────────── */
+  --font-size-body: 18px;
+  --font-size-title: var(--fs-card-title);
   /* --font-size-base: 16px; */
   --font-size-base: 1rem;
   --font-size-meta: 14px;
-  --font-size-small: 13px;
+  --font-size-small: var(--fs-caption);
 
   /* 固定 header 高度（Navbar 的 sticky 點與 body 留白都引用） */
   --ltn-header-h: 100px;
@@ -29,6 +53,12 @@
   --color-brand-gold: #e8ae2b;
   --color-brand-red: #b03c3f;
   --color-accent-orange: #d66a00;
+
+  /* ── 容器尺寸：依官網 video.ltn.com.tw 抽取 ───────────────── */
+  --container-max: 1260px; /* 官網主容器 .content */
+  --content-narrow: 940px; /* 官網內頁/列表 .content940 */
+  --container-gutter: 32px; /* 左右留白（單邊 16px）*/
+  --container-gutter-mobile: 24px; /* 小螢幕留白（單邊 12px）*/
 
   --sidebar-width: 300px;
   --article-width: 85%;
@@ -93,11 +123,10 @@
 }
 
 body {
-  line-height: 1;
+  line-height: var(--lh-base);
   margin: 0px auto;
   overflow: auto;
-  font-family:
-    Arial, helvetica, "微軟正黑體", Geneva, "Heiti TC", "新細明體", sans-serif;
+  font-family: var(--font);
   font-weight: 400;
 
   background-color: var(--bg);
@@ -111,13 +140,57 @@ h3 {
 }
 
 h1 {
-  font-size: 32 px;
+  font-size: 32px;
 }
 h2 {
-  font-size: 24 px;
+  font-size: var(--fs-lead-title); /* 24px */
 }
 h3 {
-  font-size: 18.72px;
+  font-size: var(--fs-card-title); /* 18px */
+}
+
+/* ── 官網共用：分類大標 label ─────────────────────────── */
+label {
+  display: block;
+  position: relative;
+  clear: both;
+  margin-bottom: 10px;
+  border-bottom: 4px solid #cfcfcf;
+  color: var(--color-text-strong);
+  font-size: var(--fs-section-label);
+  font-weight: bold;
+  line-height: var(--lh-section-label);
+}
+label::before {
+  content: "";
+  display: block;
+  position: absolute;
+  bottom: -4px;
+  width: 136px;
+  height: 4px;
+  background-color: #e95b5a;
+}
+
+/* ── 官網共用：更多連結 ───────────────────────────────── */
+a.more {
+  display: inline-block;
+  float: right;
+  padding: 0;
+  color: var(--color-text-strong);
+  font-size: var(--fs-link);
+  line-height: 40px;
+}
+a.more:hover {
+  color: var(--color-brand-red);
+}
+
+/* ── 官網共用：麵包屑 ─────────────────────────────────── */
+.breadcrumbs a {
+  color: var(--color-text);
+  font-size: var(--fs-link);
+}
+.breadcrumbs a:hover {
+  color: var(--color-brand-red);
 }
 
 .mediaTitle {
@@ -126,7 +199,7 @@ h3 {
 }
 
 .content940 {
-  max-width: 940px;
+  max-width: var(--content-narrow);
   width: 100%;
   float: left;
   margin: 0 auto;
@@ -150,7 +223,7 @@ h3 {
 }
 
 .first_part {
-  max-width: 1300px;
+  max-width: var(--container-max);
   width: 100%;
   margin: 0 auto;
   padding: 100px 1%;
