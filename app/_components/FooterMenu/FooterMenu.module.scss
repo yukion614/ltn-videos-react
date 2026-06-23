@@ -1,0 +1,69 @@
+.footerMenu {
+  width: 100%;
+  background-color: #1c1f26; // 黑色區塊背景
+  padding: 28px 16px;
+  text-align: center;
+}
+
+.brand {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.playIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  svg {
+    width: 22px;
+    height: 22px;
+    fill: var(--color-brand-gold); // 金色播放鍵
+  }
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px 0;
+}
+
+.link {
+  position: relative;
+  color: #cfcfd4;
+  font-size: var(--font-size-base);
+  padding: 0 16px;
+  text-decoration: none;
+  transition: color 0.2s;
+
+  // 連結之間的分隔點
+  &::before {
+    content: "·";
+    position: absolute;
+    left: -2px;
+    color: #6a6d76;
+  }
+
+  &:first-child::before {
+    content: none;
+  }
+
+  &:hover {
+    color: #fff;
+  }
+}
+
+@media (max-width: 600px) {
+  .brand {
+    font-size: 22px;
+  }
+
+  .link {
+    font-size: 13px;
+    padding: 0 10px;
+  }
+}

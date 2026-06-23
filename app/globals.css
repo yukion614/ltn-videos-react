@@ -1,21 +1,305 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* 字體 */
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap");
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --textFontSize: 20px;
+  --textLineHeight: 1.7;
+  --textLetterSpacing: 1px;
+  --textMarginBottom: 30px;
+
+  --marqueeHeight: 40px;
+
+  --font-size-body: 20px;
+  --font-size-title: 18px;
+  /* --font-size-base: 16px; */
+  --font-size-base: 1rem;
+  --font-size-meta: 14px;
+  --font-size-small: 13px;
+
+  /* 固定 header 高度（Navbar 的 sticky 點與 body 留白都引用） */
+  --ltn-header-h: 100px;
+
+  --color-surface: #fff;
+  --color-text: #111;
+  --color-text-strong: #222;
+  --color-muted: #777;
+  --color-meta: #767676;
+  --color-brand-gold: #e8ae2b;
+  --color-brand-red: #b03c3f;
+  --color-accent-orange: #d66a00;
+
+  --sidebar-width: 300px;
+  --article-width: 85%;
+  --article-width-mobile: 95%;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+
+  /* vedeio */
+  --red: #e2231a;
+  --red-badge: #e63946;
+  --red-strong: #b5170e;
+  --radius: 12px;
+  --d: 1;
+  --font: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --bg: #f1f1f4;
+  --surface: #ffffff;
+  --surface-2: #f7f7f9;
+  --hover: #f0f0f3;
+  --text: #141414;
+  --text-2: #4c4c52;
+  --text-mute: #8c8c95;
+  --border: #e6e6ea;
+  --a1-gray: #e3e4ea;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.05);
+  --on-media: #ffffff;
+
+  /* navbar 高度 */
+  --navbar-height: 44px;
+}
+
+/* 深色模式：覆蓋 :root 的變數值 */
+:root[data-theme="dark"] {
+  --color-surface: #1b1b1f;
+  --color-text: #eaeaea;
+  --color-text-strong: #fff;
+  --color-muted: #999;
+
+  --bg: #141417;
+  --surface: #1b1b1f;
+  --surface-2: #232327;
+  --hover: #2a2a2f;
+  --text: #eaeaea;
+  --text-2: #c0c0c6;
+  --text-mute: #8c8c95;
+  --border: #303036;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --textFontSize: 20px;
+    --textLineHeight: 1.7;
+    --textLetterSpacing: 1px;
+    --textMarginBottom: 30px;
   }
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1;
+  margin: 0px auto;
+  overflow: auto;
+  font-family:
+    Arial, helvetica, "微軟正黑體", Geneva, "Heiti TC", "新細明體", sans-serif;
+  font-weight: 400;
+
+  background-color: var(--bg);
+  color: var(--color-text);
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 700;
+}
+
+h1 {
+  font-size: 32 px;
+}
+h2 {
+  font-size: 24 px;
+}
+h3 {
+  font-size: 18.72px;
+}
+
+.mediaTitle {
+  font-family: "Noto Sans TC", sans-serif;
+  font-weight: 800; /* 設定字體粗細 */
+}
+
+.content940 {
+  max-width: 940px;
+  width: 100%;
+  float: left;
+  margin: 0 auto;
+  overflow: hidden;
+  letter-spacing: 1px;
+}
+
+.content {
+  width: 100%;
+  margin: 15px auto 0;
+  padding: 0;
+}
+
+.right300 {
+  width: var(--sidebar-width);
+  float: right;
+}
+
+.right {
+  display: block;
+}
+
+.first_part {
+  max-width: 1300px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 100px 1%;
+  overflow: hidden;
+}
+
+.date {
+  width: 300px;
+  height: 20px;
+  font-size: 14px;
+  color: #555;
+  text-align: center;
+}
+
+.whitecon {
+  width: 100%;
+  background-color: var(--color-surface);
+  border: 1px solid #eaeaea;
+  margin: 0px auto 30px;
+}
+
+.project {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.whitecon h1 {
+  width: 85%;
+  font-size: 28px;
+  line-height: 35px;
+  padding: 0 0 10px;
+  margin: 30px auto 20px;
+  border: none;
+  border-bottom: 3px double #8c8b8b;
+  font-family:
+    Arial, "Noto Sans TC", "微軟正黑體", Geneva, "Heiti TC", "新細明體",
+    sans-serif;
+}
+
+.whitecon h1.h1_Large {
+  width: 85%;
+  font-size: 32px;
+  line-height: 35px;
+  padding: 0 0 10px;
+  margin: 30px auto 20px;
+  border: none;
+  border-bottom: 3px double #8c8b8b;
+  font-family:
+    Arial, "Noto Sans TC", "微軟正黑體", Geneva, "Heiti TC", "新細明體",
+    sans-serif;
+}
+
+/* 分享列 */
+
+.function {
+  width: 85%;
+  height: 40px;
+  margin: 10px auto 5px;
+  a {
+    display: inline-block;
+    height: 35px;
+    width: 35px;
+    margin-right: 5px;
+  }
+  .sharefb {
+    background: url(https://cache.ltn.com.tw/images/icon/innerPages_fb.svg)
+      center no-repeat;
+    background-size: 35px;
+    cursor: pointer;
+  }
+
+  .sharetwitter {
+    background: url(https://cache.ltn.com.tw/images/icon/innerPages_X.svg)
+      center no-repeat;
+    background-size: 35px;
+    cursor: pointer;
+  }
+
+  .shareline {
+    background: url(https://cache.ltn.com.tw/images/icon/innerPages_line.svg)
+      center no-repeat;
+    background-size: 35px;
+    cursor: pointer;
+  }
+
+  .fontsize_increase {
+    background: url(https://features.ltn.com.tw/assets/images/all/fontsize1.svg)
+      no-repeat;
+    background-size: 35px;
+    float: right;
+    cursor: pointer;
+  }
+  .fontsize_reduce {
+    background: url(https://features.ltn.com.tw/assets/images/all/fontsize2.svg)
+      no-repeat;
+    background-size: 35px;
+    float: right;
+    cursor: pointer;
+  }
+
+  .print {
+    background: url(https://features.ltn.com.tw/assets/images/all/print.svg)
+      no-repeat;
+    background-size: 35px;
+    float: right;
+    cursor: pointer;
+  }
+}
+
+/* reset lists to remove default bullets site-wide */
+ul,
+ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/*  手機（< 600px） */
+@media (max-width: 600px) {
+  .right {
+    display: none;
+  }
+
+  .right300 {
+    display: none;
+  }
+
+  .whitecon > h1 {
+    width: 95%;
+  }
+
+  .function {
+    width: 95%;
+  }
+
+  .first_part {
+    padding: 0;
+  }
+}
+
+/* 平板（800–1023px） */
+@media (max-width: 1023px) {
+  .right300 {
+    display: none !important;
+  }
+}
+
+/* 桌機（≥ 1024px） */
+@media (min-width: 1024px) {
 }
