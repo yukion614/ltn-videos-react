@@ -1,0 +1,102 @@
+.latest {
+  width: 100%;
+  padding: 24px 16px 48px;
+}
+
+.wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+// 頁面標題列
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.bar {
+  display: inline-block;
+  width: 4px;
+  min-height: 24px;
+  background: #e2231a; // 自由紅
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.en {
+  color: #8a8d96;
+  font-size: 14px;
+}
+
+.status {
+  color: #8a8d96;
+  padding: 40px 0;
+  text-align: center;
+}
+
+// 影片網格
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
+
+.media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #e5e5e8;
+}
+
+.info {
+  padding: 10px 2px 0;
+}
+
+.cardTitle {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.date {
+  display: block;
+  margin-top: 6px;
+  color: #8a8d96;
+  font-size: 13px;
+}
+
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
