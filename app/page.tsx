@@ -47,11 +47,13 @@ function SectionHeader({
   title,
   en,
   more,
+  moreUrl,
 }: {
   category?: string;
   title: string;
   en?: string;
   more?: string;
+  moreUrl?: string;
 }) {
   return (
     <div
@@ -86,7 +88,7 @@ function SectionHeader({
 
       {/* 更多 */}
       {more ? (
-        <a href="#" className={styles.more}>
+        <a href={moreUrl} target="_blank" className={styles.more}>
           {more}
         </a>
       ) : null}
@@ -260,10 +262,7 @@ export default function Home() {
         </div>
       </section>
       {/* m版 影音清單 */}
-      <section
-        className={`${styles.wrap} ${styles.mobileList}`}
-        aria-label="最新影音"
-      >
+      <section className={` ${styles.mobileList}`} aria-label="最新影音">
         {mainVideos.map((video, index) => (
           <div onClick={() => setLeadVideo(index)} key={index}>
             <VideoThumbnail
@@ -282,7 +281,8 @@ export default function Home() {
             category="話題"
             title="2026 九合一選舉"
             // en="Topic"
-            more="更多 ›"
+            more="更多影片 ›"
+            moreUrl="/topic"
           />
           <div className={styles.topicGrid}>
             <VideoThumbnail
@@ -328,8 +328,8 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      <section className={styles.section}>
+      {/* 直播 */}
+      {/* <section className={styles.section}>
         <div className={styles.wrap}>
           <SectionHeader title="直播" en="Live" />
           <div className={styles.liveGrid}>
@@ -349,17 +349,22 @@ export default function Home() {
                 藍白別再擋！台灣恐跌出美國優先名單！賴清德親上火線回應軍購、高市早苗大勝、台美關係
               </h3>
               <a href="#" className={styles.watchButton}>
-                {/* <PlayIcon /> */}
+               <PlayIcon /> 
                 觀看直播
               </a>
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
       {/* 國會直播 */}
       <section className={styles.section}>
         <div className={styles.wrap}>
-          <SectionHeader title="國會直播" en="Parliament" />
+          <SectionHeader
+            title="國會直播"
+            en="Parliament"
+            more="更多影片 ›"
+            moreUrl="https://news.ltn.com.tw/video/ly"
+          />
           <div className={styles.parliamentGrid}>
             <a href="#" className={styles.parliamentPlayer}>
               <VideoMedia title="目前議程 Live" tone={7} />
