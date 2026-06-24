@@ -1,14 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import styles from "./page.module.scss";
-import type {
-  VideoListItem,
-  VideoListResponse,
-} from "../_interfaces/videoArticle";
+import styles from "@/styles/listpage.module.scss";
 import Crumb from "../_components/Crumb/Crumb";
+import { useInfiniteVideos } from "../hooks/useInfiniteVideos";
 
 const crumbs = [
   {
@@ -21,28 +17,13 @@ const crumbs = [
   },
 ];
 
-const basePath = "https://video.ltn.com.tw/brand/api";
-
 export default function LatestPage() {
-  const [videos, setVideos] = useState<VideoListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchLatest() {
-      try {
-        const res = await fetch(`${basePath}/list`);
-        const data: VideoListResponse = await res.json();
-        setVideos(data.items);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchLatest();
-  }, []);
+  // 無限往下載入的狀態與行為都封裝在 hook 裡，元件只負責畫面與掛上哨兵 ref
+  const { videos, loading, loadingMore, nextPage, sentinelRef } =
+    useInfiniteVideos();
 
   return (
-    <main className={styles.latest}>
+    <main className={styles.page}>
       <div className={styles.wrap}>
         {/* 麵包屑 */}
         <Crumb crumbs={crumbs} />
@@ -80,6 +61,16 @@ export default function LatestPage() {
               </Link>
             ))}
           </div>
+        )}
+
+        {/* 哨兵 + 狀態：捲到這裡就自動載入下一頁 */}
+        {!loading && nextPage !== null && (
+          <div ref={sentinelRef} className={styles.status}>
+            {loadingMore ? "載入中…" : ""}
+          </div>
+        )}
+        {!loading && nextPage === null && videos.length > 0 && (
+          <p className={styles.status}>已經到底了</p>
         )}
       </div>
     </main>
