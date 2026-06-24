@@ -70,11 +70,14 @@ export default function ShortsRail({ items }: { items: ShortsRailItem[] }) {
                     height="100%"
                   />
                 ) : null}
+                {/* 文字疊在圖片上：底部漸層提升可讀性 */}
+                <div className={styles.caption}>
+                  <strong className={styles.title}>{short.title}</strong>
+                  <small className={styles.views}>
+                    {short.views ?? short.publishAt}
+                  </small>
+                </div>
               </div>
-              <strong className={styles.title}>{short.title}</strong>
-              <small className={styles.views}>
-                {short.views ?? short.publishAt}
-              </small>
             </Link>
           </article>
         );

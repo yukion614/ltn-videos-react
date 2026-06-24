@@ -120,15 +120,31 @@
   font-weight: 700;
 }
 
+// 疊在圖片上的文字區，底部漸層讓白字清楚可讀
+.caption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  padding: 24px 10px 10px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.78) 0%,
+    rgba(0, 0, 0, 0.45) 45%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
 .title {
   display: -webkit-box;
   overflow: hidden;
-  margin-top: 7px;
-  padding: 0 2px;
-  color: var(--text);
+  color: #fff;
   font-size: 13px;
   font-weight: 800;
   line-height: 1.45;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -136,10 +152,10 @@
 .views {
   display: block;
   margin-top: 4px;
-  padding: 0 2px;
-  color: var(--text-mute);
+  color: rgba(255, 255, 255, 0.82);
   font-size: 12px;
   line-height: 1.35;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
 .tone0 {
