@@ -2,15 +2,15 @@ import styles from "./FooterMenu.module.scss";
 import Image from "next/image";
 
 // footer 上方的黑色區塊：自由影音標題 + 一排節目連結
-const programLinks = [
-  "政面交鋒",
-  "自由說新聞",
-  "自由爆新聞",
-  "新聞360",
-  "官我什麼事",
-  "台海情勢簡報室",
-  "娛樂後視鏡",
-  "名人開講",
+const programs = [
+  ["政面交鋒", "每週一更新 · EP.124", "politics-faceoff"],
+  ["自由說新聞", "每週一更新 · EP.88", "liberty-talks"],
+  ["自由爆新聞", "每週二更新 · EP.96", "liberty-breaking"],
+  ["新聞360", "每週三更新 · EP.56", "news-360"],
+  ["官我什麼事", "每週四更新 · EP.42", "gov-matters"],
+  ["台海情勢簡報室", "每週五更新 · EP.30", "strait-brief"],
+  ["娛樂後視鏡", "每週六更新 · EP.18", "ent-rearview"],
+  ["名人開講", "每週一更新 · EP.110", "celeb-talks"],
 ];
 
 export default function FooterMenu() {
@@ -28,9 +28,9 @@ export default function FooterMenu() {
       </div>
 
       <nav className={styles.links}>
-        {programLinks.map((name) => (
-          <a href="#" className={styles.link} key={name}>
-            {name}
+        {programs.map((item, index) => (
+          <a href={`/programs/${item[2]}`} className={styles.link} key={index}>
+            {item[0]}
           </a>
         ))}
       </nav>
