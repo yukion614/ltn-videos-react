@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import styles from "./Navbar.module.scss";
 import type {
@@ -27,6 +28,7 @@ export default function Navbar() {
   //當網頁在瀏覽器開機（Mounted）後，next-themes 會跑去偵測瀏覽器底層的 window.matchMedia('(prefers-color-scheme: dark)')。
   const { resolvedTheme, setTheme } = useTheme();
   const [latestVideo, setLatestVideo] = useState<VideoListItem[]>([]);
+  const pathname = usePathname();
 
   const mainLinks = [
     { name: "最新", link: "latest" },
@@ -105,7 +107,13 @@ export default function Navbar() {
 
         <nav className={styles.navLinks}>
           {mainLinks.map((link, index) => (
-            <Link href={`/${link.link}`} key={index}>
+            <Link
+              href={`/${link.link}`}
+              key={index}
+              className={
+                pathname.includes(`/${link.link}`) ? styles.active : ""
+              }
+            >
               {link.name}
             </Link>
           ))}

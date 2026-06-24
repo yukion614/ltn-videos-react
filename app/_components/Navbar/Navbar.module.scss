@@ -113,6 +113,10 @@
   cursor: pointer;
 }
 
+.wrap > a:has(.navLogo) {
+  flex-shrink: 0;
+}
+
 .navLinks {
   position: absolute;
   top: 0;
@@ -144,6 +148,11 @@
     &:hover,
     &:focus-visible {
       color: var(--nav-red);
+    }
+
+    &.active {
+      color: var(--red);
+      border-bottom: var(--red) solid 2px;
     }
   }
 }
