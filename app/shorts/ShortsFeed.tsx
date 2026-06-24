@@ -324,7 +324,9 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
             const isActive = i === index;
             // 只渲染目前及相鄰兩則的細節，其餘僅佔位避免一次掛太多
             const isNear = Math.abs(i - index) <= 1;
-            const shareUrls = buildShareUrls(short.articleUrl || short.watchUrl);
+            const shareUrls = buildShareUrls(
+              short.articleUrl || short.watchUrl,
+            );
 
             return (
               <section className={styles.slide} key={short.id}>
@@ -492,6 +494,16 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
                   >
                     <h1 className={styles.dockTitle}>{short.title}</h1>
                     <p className={styles.dockSummary}>{short.summary}</p>
+                    {/* 描述 */}
+                    {short.descriptionHtml && (
+                      <div
+                        className={styles.mobilePanelBody}
+                        dangerouslySetInnerHTML={{
+                          __html: short.descriptionHtml,
+                        }}
+                      />
+                    )}
+
                     {isActive ? (
                       <button
                         type="button"

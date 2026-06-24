@@ -22,6 +22,10 @@ $nav-h: 160px;
 
 // 單則短影音佔滿一個舞台高度，內容置中
 .slide {
+  // 影片高度與寬度（高 × 9/16）定義在共同祖先，供 .video / .infoDock 共用
+  --video-h: min(760px, calc(100vh - #{$nav-h} - 48px));
+  --video-w: calc(var(--video-h) * 9 / 16);
+
   position: relative;
   display: flex;
   align-items: center;
@@ -45,7 +49,7 @@ $nav-h: 160px;
   align-items: stretch;
   justify-content: center;
   gap: 0;
-  height: min(760px, calc(100vh - #{$nav-h} - 48px));
+  height: var(--video-h);
   transition: gap 0.25s ease;
 }
 
@@ -297,6 +301,9 @@ $nav-h: 160px;
   }
 }
 
+.mobilePanelBody {
+}
+
 .share {
   display: flex;
   gap: 12px;
@@ -433,6 +440,7 @@ $nav-h: 160px;
 @media (max-width: 1100px) {
   .infoDock {
     left: 24px;
+    width: var(--video-w);
   }
 }
 
@@ -449,17 +457,21 @@ $nav-h: 160px;
 
   .panel {
     position: absolute;
-    inset: 0;
+    // inset: 0;
     z-index: 6;
     width: 100% !important;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.97);
-    opacity: 0;
+    height: auto;
+    bottom: 0;
+    border-radius: 14px 14px 0 0;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
     transform: translateY(16px);
     pointer-events: none;
-    transition:
-      opacity 0.3s ease,
-      transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+    transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+
+    .panelTitle {
+      font-size: var(--font-size-small);
+    }
   }
 
   .panelOpen {
@@ -470,6 +482,7 @@ $nav-h: 160px;
 
   .panelInner {
     width: 100%;
+    padding: 14px;
   }
 
   .share {
@@ -479,10 +492,41 @@ $nav-h: 160px;
 
 @media (max-width: 480px) {
   .infoDock {
-    left: 16px;
-    right: 72px; // 右側留給浮動分享列，避免文字被蓋住
-    bottom: 24px;
-    width: auto;
+    left: 50%; // 左緣移到中線
+    right: auto; // 取消原本的 right，避免與 left 互相拉扯
+    transform: translateX(-50%); // 往左退回自身一半寬 → 真正水平置中
+    padding: calc(100% - 95%);
+    bottom: 26px; // 往上抬，空出底部給時間軸（避免視覺壓線）
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 1) 0%,
+      rgba(0, 0, 0, 0.8) 20%,
+      rgba(0, 0, 0, 0) 100%
+    );
+    width: var(--video-w); // 寬度＝影片寬，置中後與影片同框
+    pointer-events: none; // 整塊不攔截觸控 → 點擊穿透到下方的時間軸 .seekBar
+  }
+
+  .dockTitle {
+    margin: 0 0 8px;
+    font-size: var(--font-size-small);
+    font-weight: 800;
+    line-height: 1.4;
+    color: #fff;
+  }
+
+  .moreBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #ffdd00;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    pointer-events: auto; // infoDock 設了 none，這裡救回來讓「更多」可點
   }
 
   .share {
