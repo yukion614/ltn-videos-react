@@ -69,7 +69,7 @@
 .playlistScroll {
   /* 每個項目的建議高度（可依需要調整），不改變內部元素尺寸 */
   --playlist-item-h: 86px;
-  max-height: calc(var(--playlist-item-h) * 5);
+  max-height: calc(var(--playlist-item-h) * 5 + 40px);
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -135,7 +135,7 @@
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
-  padding: 6px 0;
+  padding: 6px 10px;
   background: #000;
   gap: 10px;
   width: 100%;
@@ -145,6 +145,7 @@
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch; // iOS 的慣性回彈
   scroll-snap-type: x proximity;
+  scroll-padding: 0 10px; // 讓 snap 對齊時保留左右 10px 邊距，不會把容器 padding 吃掉
   scrollbar-width: none; // Firefox
 
   &::-webkit-scrollbar {
@@ -154,6 +155,14 @@
   > * {
     flex: 0 0 141px;
     scroll-snap-align: start;
+
+    // &:first-child {
+    //   padding-left: 10px;
+    // }
+
+    // &:last-child {
+    //   padding-right: 10px;
+    // }
   }
 }
 
