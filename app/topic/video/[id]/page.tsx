@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import VideoPlayer from "@/app/_components/VideoPlayer/VideoPlayer";
@@ -8,13 +7,14 @@ import type {
 } from "@/app/_interfaces/BrandVideo";
 import styles from "@/styles/videopage.module.scss";
 import Crumb from "@/app/_components/Crumb/Crumb";
+import { buildVideoMetadata, getVideoIds } from "@/app/_lib/videoDetail";
+import { notFound } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export const metadata: Metadata = {
-  title: "影片詳細頁 | 自由影音",
-  description: "自由影音影片詳細頁",
-};
+// 靜態匯出：列出要預先產生的影片 id
+export async function generateStaticParams() {
+  const ids = await getVideoIds();
+  return ids.map((id) => ({ id }));
+}
 
 const basePath = "https://video.ltn.com.tw/brand/api";
 
@@ -36,37 +36,6 @@ const fallbackVideo: BrandVideoResponse["video"] = {
   spriteUrl: "",
 };
 
-const fallbackRelated: VideoRelatedItem[] = [
-  {
-    id: 1,
-    title: "賴清德：台灣會持續走在民主與自由的道路上",
-    publishAt: "政治頻道 · 45萬次觀看",
-    thumbnailUrl: "https://img.youtube.com/vi/cqlHFJMg_0A/mqdefault.jpg",
-    articleUrl: "/brand/video/1",
-  },
-  {
-    id: 2,
-    title: "台北收盤漲 300 點 台積電重返千元大關",
-    publishAt: "財富自由 · 67萬次觀看",
-    thumbnailUrl: "https://img.youtube.com/vi/cqlHFJMg_0A/mqdefault.jpg",
-    articleUrl: "/brand/video/2",
-  },
-  {
-    id: 3,
-    title: "藍綠白布局分析與最新動向解析",
-    publishAt: "政治頻道 · 9萬次觀看",
-    thumbnailUrl: "https://img.youtube.com/vi/cqlHFJMg_0A/mqdefault.jpg",
-    articleUrl: "/brand/video/3",
-  },
-  {
-    id: 4,
-    title: "颱風季來臨注意事項 保命指南看這裡",
-    publishAt: "生活頻道 · 6萬次觀看",
-    thumbnailUrl: "https://img.youtube.com/vi/cqlHFJMg_0A/mqdefault.jpg",
-    articleUrl: "/brand/video/4",
-  },
-];
-
 const crumbs = [
   {
     href: "/",
@@ -76,10 +45,10 @@ const crumbs = [
     href: "/topic",
     label: "節目",
   },
-  {
-    href: "/celebrity-talk",
-    label: "名人開講",
-  },
+  // {
+  //   href: "/celebrity-talk",
+  //   label: "名人開講",
+  // },
   {
     href: "/",
     label: "影片標題",
@@ -88,9 +57,7 @@ const crumbs = [
 
 async function getVideo(id: string) {
   try {
-    const res = await fetch(`${basePath}/video/${id}`, {
-      cache: "no-store",
-    });
+    const res = await fetch(`${basePath}/video/${id}`);
 
     if (!res.ok) {
       return null;
@@ -100,6 +67,17 @@ async function getVideo(id: string) {
   } catch {
     return null;
   }
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const data = await getVideo(id);
+  if (!data?.video) notFound();
+  return buildVideoMetadata(data);
 }
 
 function toProxiedHls(url?: string) {
@@ -115,14 +93,14 @@ function toLocalVideoHref(item: Pick<VideoRelatedItem, "id" | "articleUrl">) {
     const url = new URL(item.articleUrl);
     return url.pathname;
   } catch {
-    return item.articleUrl || `/brand/video/${item.id}`;
+    return item.articleUrl || `/topic/video/${item.id}`;
   }
 }
 
 function ShareIcon({ type }: { type: "line" | "facebook" | "x" }) {
   if (type === "line") {
     return (
-      <Image
+      <img
         src="/line.jpg"
         height="35"
         width="35"
@@ -176,9 +154,10 @@ export default async function VideoDetailPage({
 }) {
   const { id } = await params;
   const data = await getVideo(id);
-  const video = data?.video ?? fallbackVideo;
-  const related = data?.related?.length ? data.related : fallbackRelated;
-  const currentUrl = data?.seo?.canonicalUrl || video.canonicalUrl || "#";
+  if (!data?.video) notFound();
+  const video = data.video;
+  const related = data.related ?? [];
+  const currentUrl = data.seo?.canonicalUrl || video.canonicalUrl || "#";
 
   return (
     <main className={styles.page}>
@@ -279,11 +258,16 @@ export default async function VideoDetailPage({
                 key={item.id}
               >
                 <span className={styles.thumb}>
-                  <Image
+                  <img
                     src={item.thumbnailUrl || fallbackVideo.posterUrl}
                     alt={item.title}
-                    fill
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
                   />
                 </span>
                 <strong>{item.title}</strong>
