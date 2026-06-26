@@ -12,11 +12,12 @@
 
 .tabsWrap {
   border-bottom: 1px solid var(--border);
-  background: var(--surface-2);
+  background: #f7f7f9;
 }
 
 .programTabs {
   display: flex;
+  justify-content: center;
   gap: 4px;
   width: min(100% - var(--container-gutter-mobile), var(--container-max));
   margin: 0 auto;
@@ -30,7 +31,6 @@
 
   a {
     flex-shrink: 0;
-    border-radius: 999px;
     color: var(--text-2);
     font-size: 14px;
     font-weight: 700;
@@ -47,12 +47,12 @@
 }
 
 .programTabs .tabActive {
-  background: var(--red);
-  color: #fff;
-
+  // background: var(--red);
+  color: var(--red);
+  border-bottom: 2px solid var(--red);
   &:hover,
   &:focus-visible {
-    color: #fff;
+    color: var(--red);
   }
 }
 
