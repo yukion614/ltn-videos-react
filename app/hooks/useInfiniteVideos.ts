@@ -4,8 +4,11 @@ import type {
   VideoListResponse,
 } from "../_interfaces/videoArticle";
 
-// 走本地分頁 API（app/api/list）；真實上游不分頁，無法示範無限 scroll
-const basePath = "/api";
+// 純靜態版：沒有本地 API，改直接打上游（已開 CORS）。
+// 上游只回 15 筆且不分頁，這裡在前端把它擴充成可分頁的資料池，用來示範無限 scroll。
+const UPSTREAM = "https://video.ltn.com.tw/brand/api/list";
+const PAGE_SIZE = 9; // 每頁筆數
+const TOTAL_PAGES = 6; // 模擬總頁數（捲到底會停）
 
 // useInfiniteVideos：封裝「無限往下載入影片清單」的狀態與行為。
 // 回傳畫面需要的資料與哨兵 ref，元件只要把 sentinelRef 掛到 DOM 即可。
@@ -16,10 +19,10 @@ export function useInfiniteVideos() {
   const [nextPage, setNextPage] = useState<number | null>(1); // 下一頁頁碼，null 代表沒有更多
   // 用 ref 擋住「正在抓取中又重複觸發」，避免 IntersectionObserver 連續觸發抓同一頁
   const fetchingRef = useRef(false);
-  // 記住已載入的 id，跨頁去重不依賴 videos state（避免 useCallback 抓到舊值）
-  const seenIdsRef = useRef<Set<number>>(new Set());
+  // 前端資料池（打一次上游後快取在這裡，之後分頁都從它切片）
+  const poolRef = useRef<VideoListItem[] | null>(null);
 
-  // loadPage：抓取指定頁碼的影片，並把結果累加到清單。useCallback 空依賴 → 整個生命週期只建立一次
+  // loadPage：載入指定頁碼的影片，並把結果累加到清單。useCallback 空依賴 → 整個生命週期只建立一次
   const loadPage = useCallback(async (page: number) => {
     // 已經有請求在進行中就直接退出，避免 observer 連環觸發把同一頁抓很多次
     if (fetchingRef.current) return;
@@ -32,23 +35,32 @@ export function useInfiniteVideos() {
     else setLoadingMore(true);
 
     try {
-      // 向本地分頁 API 要這一頁的資料
-      const res = await fetch(`${basePath}/list?page=${page}`);
-      // 解析 JSON 成我們定義的回傳型別
-      const data: VideoListResponse = await res.json();
-      // 依 id 去重，避免後端回傳重疊資料造成重複 key（只留沒看過的）
-      const fresh = data.items.filter((v) => !seenIdsRef.current.has(v.id));
-      // 把這批新 id 全部記進「已看過」集合，供下一頁去重
-      fresh.forEach((v) => seenIdsRef.current.add(v.id));
+      // 第一次需要時才打上游，並把 15 筆素材擴充成多頁資料池（id 重新編號保證唯一）
+      if (!poolRef.current) {
+        const res = await fetch(UPSTREAM);
+        const data: VideoListResponse = await res.json();
+        const base = data.items;
+        const target = PAGE_SIZE * TOTAL_PAGES;
+        poolRef.current = Array.from({ length: target }, (_, i) => {
+          const src = base[i % base.length];
+          return {
+            ...src,
+            id: 100000 + i, // 唯一遞增 id（避免 React key 重複）
+            title: `${src.title}（#${i + 1}）`, // 標明序號，捲動時可看出有載入新資料
+          };
+        });
+      }
 
-      // 有新資料才更新畫面；累加而非覆蓋，達成無限往下接
-      if (fresh.length > 0) setVideos((prev) => [...prev, ...fresh]);
+      // 從資料池切出這一頁
+      const pool = poolRef.current;
+      const start = (page - 1) * PAGE_SIZE;
+      const items = pool.slice(start, start + PAGE_SIZE);
+      const hasMore = start + PAGE_SIZE < pool.length;
 
-      // 信任資料、不信任 hasMore：非首頁卻沒有新資料 → 視為到底，把 nextPage 設 null 停止觀察
-      // （目前後端 hasMore 永遠回 true 且不分頁，靠這條件避免無限空轉）
-      if (!isFirst && fresh.length === 0) setNextPage(null);
-      // 否則照後端給的：還有更多就記下一頁頁碼，沒有就設 null
-      else setNextPage(data.hasMore ? data.nextPage : null);
+      // 有資料才更新畫面；累加而非覆蓋，達成無限往下接
+      if (items.length > 0) setVideos((prev) => [...prev, ...items]);
+      // 還有更多就記下一頁頁碼，沒有就設 null 停止觀察
+      setNextPage(hasMore ? page + 1 : null);
     } finally {
       // 不論成功或失敗都要解鎖，否則之後永遠抓不了
       fetchingRef.current = false;
