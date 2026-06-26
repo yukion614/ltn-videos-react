@@ -1,0 +1,82 @@
+// 取自 cache.ltn.com.tw/css/rwd_head_tail.css —— .ltnheader 白色置頂選單
+.ltnheader {
+  width: 100%;
+  height: 60px;
+  border-bottom: 1px solid #dcdcdc;
+  background-color: #fff;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  color: #111;
+  line-height: 1.3;
+
+  * {
+    box-sizing: border-box;
+  }
+
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.4);
+    border-radius: 3px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .channel {
+    max-width: 1260px;
+    height: 60px;
+    margin: 0 auto;
+    padding: 0 5px;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0 10px;
+  }
+
+  .logo {
+    display: inline-block;
+    width: 160px;
+    height: auto;
+
+    img {
+      width: 100%;
+      height: auto;
+      margin-top: -3.9px;
+      transform: scaleY(1.01); // 縱向拉長變高（數值越大越高、變形越明顯）
+      transform-origin: center; // 以中心為基準拉伸
+    }
+  }
+
+  ul {
+    max-width: calc(100% - 160px);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0 10px;
+
+    li {
+      flex-shrink: 0;
+
+      a {
+        font-size: 1.05rem;
+        letter-spacing: 0.5px;
+        color: inherit;
+
+        &:hover,
+        &:active {
+          color: #c00;
+        }
+      }
+    }
+
+    li.li_rich a {
+      letter-spacing: -0.01rem;
+    }
+  }
+}
