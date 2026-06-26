@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import Crumb from "../_components/Crumb/Crumb";
 import type {
@@ -157,11 +156,16 @@ export default function ProgramsPage() {
                   <Link className={styles.card} href={item.href} key={item.id}>
                     <span className={styles.media}>
                       {item.thumbnailUrl ? (
-                        <Image
+                        <img
                           src={item.thumbnailUrl}
                           alt={item.title}
-                          fill
-                          sizes="(max-width: 759px) 100vw, (max-width: 1120px) 25vw, 280px"
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
                         />
                       ) : (
                         <ProgramFallback

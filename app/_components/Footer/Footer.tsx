@@ -1,4 +1,3 @@
-import Image from "next/image";
 import style from "./Footer.module.scss";
 
 export default function Footer() {
@@ -8,7 +7,7 @@ export default function Footer() {
       data-desc="底部選單"
     >
       <a href="https://www.ltn.com.tw/" title="自由時報" data-desc="自由時報">
-        <Image
+        <img
           src="https://cache.ltn.com.tw/images/logo_foot.png"
           width={110}
           height={30}

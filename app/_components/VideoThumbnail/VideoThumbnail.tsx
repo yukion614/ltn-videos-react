@@ -1,4 +1,3 @@
-import Image from "next/image";
 import styles from "./VideoThumbnail.module.scss";
 import Link from "next/link";
 
@@ -32,12 +31,16 @@ export default function VideoPlayer({
         .join(" ")}
     >
       <div className={variant === "overlay" ? styles.Image : styles.topicMini}>
-        <Image
+        <img
           src={src}
           alt={alt}
-          fill
-          style={{ objectFit: "cover" }}
-          sizes="(max-width: 768px) 100vw,600px"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+          }}
         />
         {duration ? <span className={styles.duration}>{duration}</span> : null}
         {variant === "overlay" && (title || meta) && (

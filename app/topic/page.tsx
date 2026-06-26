@@ -3,7 +3,6 @@ import Crumb from "../_components/Crumb/Crumb";
 import styles from "@/styles/listpage.module.scss";
 import { useInfiniteVideos } from "../hooks/useInfiniteVideos";
 import Link from "next/link";
-import Image from "next/image";
 
 const crumbs = [
   {
@@ -49,12 +48,16 @@ export default function page() {
                   key={video.id}
                 >
                   <div className={styles.media}>
-                    <Image
+                    <img
                       src={video.thumbnailUrl}
                       alt={video.title}
-                      fill
-                      style={{ objectFit: "cover" }}
-                      sizes="(max-width: 768px) 100vw, 320px"
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
                     />
                   </div>
                   <div className={styles.info}>

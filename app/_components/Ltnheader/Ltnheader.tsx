@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import style from "./Ltnheader.module.scss";
 import SearchForm from "./SearchForm";
 import HeaderKeyword from "./HeaderKeyword";
@@ -17,7 +16,7 @@ export default function Ltnheader() {
           data-desc="自由時報"
           className={style.logo}
         >
-          <Image
+          <img
             src="https://cache.ltn.com.tw/images/ltn_logo.png"
             alt="自由時報"
             width={185}

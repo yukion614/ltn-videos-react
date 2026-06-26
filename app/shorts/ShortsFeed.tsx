@@ -5,7 +5,6 @@ import type { PointerEvent as ReactPointerEvent, SyntheticEvent } from "react";
 import dynamic from "next/dynamic";
 import styles from "./page.module.scss";
 import type { ShortsApiItem, ShortsApiResponse } from "../_interfaces/shorts";
-import Image from "next/image";
 
 // react-player v3：以 src 指定來源（v2 的 url 已停用）
 const ReactPlayer = dynamic(() => import("react-player"), {
@@ -50,7 +49,7 @@ function ShareLinks({ urls, btnClass }: { urls: ShareUrls; btnClass: string }) {
         rel="noopener noreferrer"
         aria-label="分享到 LINE"
       >
-        <Image
+        <img
           src="/line.jpg"
           height={35}
           width={35}

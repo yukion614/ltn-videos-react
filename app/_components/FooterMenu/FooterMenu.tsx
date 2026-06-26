@@ -1,5 +1,4 @@
 import styles from "./FooterMenu.module.scss";
-import Image from "next/image";
 
 // footer 上方的黑色區塊：自由影音標題 + 一排節目連結
 const programs = [
@@ -17,7 +16,7 @@ export default function FooterMenu() {
   return (
     <section className={styles.footerMenu} aria-label="自由影音節目選單">
       <div className={styles.brand}>
-        <Image
+        <img
           className={styles.navLogo}
           src={"/ltn-vedio.png"}
           alt="自由影音"

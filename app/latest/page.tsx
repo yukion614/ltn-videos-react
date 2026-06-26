@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import styles from "@/styles/listpage.module.scss";
 import Crumb from "../_components/Crumb/Crumb";
@@ -46,12 +45,16 @@ export default function LatestPage() {
                 key={video.id}
               >
                 <div className={styles.media}>
-                  <Image
+                  <img
                     src={video.thumbnailUrl}
                     alt={video.title}
-                    fill
-                    style={{ objectFit: "cover" }}
-                    sizes="(max-width: 768px) 100vw, 320px"
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
                   />
                 </div>
                 <div className={styles.info}>
