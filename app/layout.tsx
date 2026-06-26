@@ -4,8 +4,8 @@ import "./globals.css";
 import Navbar from "./_components/Navbar/Navbar";
 import FooterMenu from "./_components/FooterMenu/FooterMenu";
 import Footer from "./_components/Footer/Footer";
-import Ltnheader from "./_components/Ltnheader/Ltnheader";
 import ThemeProvider from "./_components/ThemeProvider/ThemeProvider";
+import VideoChannelNav from "./_components/VideoChannelNav/VideoChannelNav";
 
 // fonts
 const geistSans = localFont({
@@ -22,6 +22,9 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "自由影音",
   description: "自由影音首頁",
+  icons: {
+    icon: "/faviconV2.png",
+  },
 };
 
 export default function RootLayout({
@@ -35,7 +38,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider>
-          <Ltnheader />
+          <VideoChannelNav />
           <Navbar />
           {children}
           <FooterMenu />
