@@ -2,7 +2,6 @@
 import styles from "./page.module.scss";
 import { useEffect, useState } from "react";
 import VideoPlayer from "./_components/VideoPlayer/VideoPlayer";
-import Image from "next/image";
 import VideoThumbnail from "./_components/VideoThumbnail/VideoThumbnail";
 import ShortsRail from "./_components/ShortsRail/ShortsRail";
 import type { ShortsApiResponse, ShortsRailItem } from "./_interfaces/shorts";
@@ -31,16 +30,24 @@ const programs = [
   ["名人開講", "每週一更新 · EP.110", "celeb-talks"],
 ];
 
-const agenda = [
-  ["院會", "LIVE", true],
-  ["外交及國防", "OFF", false],
-  ["內政", "OFF", false],
-  ["經濟", "OFF", false],
-  ["教育及文化", "LIVE", true],
-  ["交通", "OFF", false],
-  ["司法及法制", "OFF", false],
-  ["社福及衛環", "LIVE", true],
-] as const;
+// 國會議程資料：每個議程帶自己的影片網址，isLive 為 true 時可被播放器讀取
+// url 支援 mp4 / hls(.m3u8) / YouTube 等 react-player 支援的來源
+interface AgendaItem {
+  name: string;
+  isLive: boolean;
+  url?: string;
+}
+
+const agenda: AgendaItem[] = [
+  { name: "院會", isLive: true, url: "" },
+  { name: "外交及國防", isLive: false },
+  { name: "內政", isLive: false },
+  { name: "經濟", isLive: false },
+  { name: "教育及文化", isLive: true, url: "" },
+  { name: "交通", isLive: false },
+  { name: "司法及法制", isLive: false },
+  { name: "社福及衛環", isLive: true, url: "" },
+];
 
 function SectionHeader({
   category,
@@ -125,6 +132,12 @@ export default function Home() {
   const [leadVideo, setLeadVideo] = useState<number | 0>(0); //預設第一隻影片
   const [shorts, setShorts] = useState<ShortsRailItem[]>([]); //shorts
   const basePath = "https://video.ltn.com.tw/brand/api";
+
+  // 目前選中的議程：預設抓第一個 LIVE 的議程；點擊其他 LIVE 議程可切換
+  const firstLiveIndex = agenda.findIndex((item) => item.isLive); //索引值
+  const [activeAgenda, setActiveAgenda] = useState(firstLiveIndex);
+  const currentAgenda = agenda[activeAgenda];
+  // const currentAgenda = null;
 
   async function fetchMainVideo() {
     const url = `${basePath}/list`;
@@ -239,7 +252,7 @@ export default function Home() {
                     className={styles.media}
                     style={{ position: "relative" }}
                   >
-                    <Image
+                    <img
                       src={video.thumbnailUrl}
                       width={116}
                       height={65}
@@ -357,43 +370,67 @@ export default function Home() {
         </div>
       </section> */}
       {/* 國會直播 */}
-      <section className={styles.section}>
-        <div className={styles.wrap}>
-          <SectionHeader
-            title="國會直播"
-            en="Parliament"
-            more="更多影片 ›"
-            moreUrl="https://news.ltn.com.tw/video/ly"
-          />
-          <div className={styles.parliamentGrid}>
-            <a href="#" className={styles.parliamentPlayer}>
-              <VideoMedia title="目前議程 Live" tone={7} />
-              <span className={styles.liveBadge}>LIVE</span>
-            </a>
-            <div className={styles.agenda}>
-              <div className={styles.agendaHeader}>
-                目前議程 <span>Live</span>
+      {currentAgenda?.isLive && (
+        <section className={styles.section}>
+          <div className={styles.wrap}>
+            <SectionHeader
+              title="國會直播"
+              en="Parliament"
+              more="更多影片 ›"
+              moreUrl="https://news.ltn.com.tw/video/ly"
+            />
+
+            <div className={styles.parliamentGrid}>
+              {/* 直播畫面 */}
+              <div className={styles.parliamentPlayer}>
+                {currentAgenda.url ? (
+                  <VideoPlayer
+                    src={currentAgenda.url}
+                    poster=""
+                    title={currentAgenda.name}
+                  />
+                ) : (
+                  <VideoMedia
+                    title={currentAgenda?.name ?? "目前議程 Live"}
+                    tone={7}
+                  />
+                )}
+                {currentAgenda?.isLive ? (
+                  <span className={styles.liveBadge}>LIVE</span>
+                ) : null}
               </div>
-              {agenda.map(([name, state, isLive], index) => (
-                <a
-                  href="#"
-                  className={`${styles.agendaItem} ${
-                    index === 0 ? styles.agendaItemActive : ""
-                  }`}
-                  key={name}
-                >
-                  <span>{name}</span>
-                  <strong
-                    className={isLive ? styles.agendaLive : styles.agendaOff}
+              {/* 直播選項 */}
+              <div className={styles.agenda}>
+                <div className={styles.agendaHeader}>
+                  目前議程 <span>Live</span>
+                </div>
+                {agenda.map((item, index) => (
+                  <a
+                    href="#"
+                    className={`${styles.agendaItem} ${
+                      index === activeAgenda ? styles.agendaItemActive : ""
+                    }`}
+                    key={item.name}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (item.isLive) setActiveAgenda(index);
+                    }}
                   >
-                    {state}
-                  </strong>
-                </a>
-              ))}
+                    <span>{item.name}</span>
+                    <strong
+                      className={
+                        item.isLive ? styles.agendaLive : styles.agendaOff
+                      }
+                    >
+                      {item.isLive ? "LIVE" : "OFF"}
+                    </strong>
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </main>
   );
 }

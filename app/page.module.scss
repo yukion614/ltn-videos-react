@@ -13,13 +13,11 @@
 .heroMobile {
   background: #000;
 
+  // 首頁 m 版 hero 標題字體（只影響首頁的 VideoPlayer）
+  --player-title-size: 18px;
+
   .media {
     border-radius: 0;
-  }
-
-  .mediaTitle {
-    font-size: 22px;
-    line-height: 1.32;
   }
 }
 
@@ -734,13 +732,11 @@
   .lead {
     display: flex;
 
+    // 首頁桌面版 hero 標題字體（只影響首頁的 VideoPlayer）
+    --player-title-size: 26px;
+
     .media {
       width: 100%;
-    }
-
-    .mediaTitle {
-      font-size: 26px;
-      line-height: 1.3;
     }
   }
 
