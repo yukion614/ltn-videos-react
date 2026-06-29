@@ -13,9 +13,13 @@ const ReactPlayer = dynamic(() => import("react-player"), {
   loading: () => <div className={styles.playerLoading}>載入中</div>,
 });
 
-// 來源未開 CORS，改走 next.config.ts 的同源代理（/hls/...）
+// 上游只對 *.ltn.com.tw 開 CORS：正式環境直接用原始網址；
+// 本機 dev（localhost）才走 next.config.ts 的同源代理 /hls/*
 function toProxiedHls(url: string) {
-  return url.replace("https://video.ltn.com.tw/media/", "/hls/");
+  if (process.env.NODE_ENV === "development") {
+    return url.replace("https://video.ltn.com.tw/media/", "/hls/");
+  }
+  return url;
 }
 
 export default function ShortsRail({ items }: { items: ShortsRailItem[] }) {

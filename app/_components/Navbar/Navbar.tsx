@@ -71,11 +71,15 @@ export default function Navbar() {
 
         return {
           ...item,
-          // 換成同源 proxy 路徑，繞過來源未開 CORS 的限制（對應 next.config 的 /hls rewrite）
-          hlsUrl: detailData.video.hlsUrl.replace(
-            "https://video.ltn.com.tw/media/",
-            "/hls/",
-          ),
+          // 上游只對 *.ltn.com.tw 開 CORS：正式環境直接用原始網址；
+          // 本機 dev 才換成同源 proxy 路徑（對應 next.config 的 /hls rewrite）
+          hlsUrl:
+            process.env.NODE_ENV === "development"
+              ? detailData.video.hlsUrl.replace(
+                  "https://video.ltn.com.tw/media/",
+                  "/hls/",
+                )
+              : detailData.video.hlsUrl,
         };
       }),
     );
