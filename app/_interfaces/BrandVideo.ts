@@ -10,6 +10,7 @@ export interface BrandVideoResponse {
     summary: string; // 清理後摘要（移除網址、分隔線與頻道宣傳） [cite: 280]
     orientation: "vertical" | "horizontal"; // 影片方向 [cite: 280]
     canonicalUrl: string; // 一般影片頁 canonical URL [cite: 280]
+    newsUrl: string;
     posterUrl: string; // 播放器 posterURL [cite: 280]
     hlsUrl: string; // HLS 串流 URL [cite: 280]
     spriteUrl: string; // 預覽縮圖 sprite URL [cite: 280]
