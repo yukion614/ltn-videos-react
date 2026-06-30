@@ -36,8 +36,8 @@ export interface PlaylistVideoItem {
   title: string; // 影片標題
   publishAt: string; // 發布時間（YYYY/MM/DD HH:mm）
   thumbnailUrl: string; // 列表縮圖 URL
-  articleUrl: string; // 一般影片頁導頁連結
-  watchUrl: string; // 觀看頁連結
+  // 觀看頁連結，格式 /video/{slug}/{playlistKey}；詳情 API 的 key 為第一段 slug
+  watchUrl: string;
 }
 
 // 國會直播 API：congress 區塊 items[0].apiUrl（如 .../brand/api/congress-live）

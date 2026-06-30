@@ -3,11 +3,14 @@ export interface vedioArticle {
   id: number; // 影片 ID
   title: string; // 影片標題
   publishAt: string; // 發布時間，格式為YYYY/MM/DD HH:mm
-  articleUrl: string; // 一般影片頁導頁連結
+  // 觀看頁連結，格式為 /video/{slug} 或 /video/{slug}/{playlistKey}。
+  // 影片詳情 API（/video/{key}）的 key 就是第一段 slug，不是數字 id。
+  watchUrl: string;
 }
 
 export interface VideoListItem extends vedioArticle {
-  thumbnailUrl: string; // 列表縮圖 URL [cite: 123]
+  thumbnailUrl: string; // 列表縮圖 URL
+  // /list 與 playlist-items 都不會回傳 hlsUrl；此欄位為前端另打詳情後補上（如 Navbar）
   hlsUrl?: string;
 }
 

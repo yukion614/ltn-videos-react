@@ -11,7 +11,7 @@ export interface ShortsApiItem {
   summary: string;
   orientation: ShortsOrientation;
   displayMode: ShortsDisplayMode;
-  articleUrl: string;
+  // 觀看頁連結，格式 /video/{slug}；後端已移除 articleUrl
   watchUrl: string;
   posterUrl: string;
   hlsUrl: string;
