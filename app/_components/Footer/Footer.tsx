@@ -1,6 +1,11 @@
+"use client";
 import style from "./Footer.module.scss";
+import { usePathname } from "next/navigation";
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  if (pathname.startsWith("/shorts")) return null;
   return (
     <footer
       className={`${style.features_footer} ${style.boxTitle}`}

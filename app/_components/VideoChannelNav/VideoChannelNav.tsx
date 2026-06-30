@@ -1,12 +1,20 @@
+"use client";
 import Link from "next/link";
 import style from "./VideoChannelNav.module.scss";
+import { usePathname } from "next/navigation";
+import { useIsMobile } from "@/app/hooks/useIsMobile";
 
 // 白色置頂選單 —— 取自 https://video.ltn.com.tw/ 的 <div class="ltnheader"> .channel
 const menuLinks = [
   { title: "即時", href: "https://news.ltn.com.tw/list/breakingnews" },
   { title: "熱門", href: "https://news.ltn.com.tw/list/breakingnews/popular" },
   { title: "政治", href: "https://news.ltn.com.tw/list/breakingnews/politics" },
-  { title: "財富自由", href: "https://stock.ltn.com.tw", external: true, rich: true },
+  {
+    title: "財富自由",
+    href: "https://stock.ltn.com.tw",
+    external: true,
+    rich: true,
+  },
   { title: "軍武", href: "https://def.ltn.com.tw" },
   { title: "社會", href: "https://news.ltn.com.tw/list/breakingnews/society" },
   { title: "生活", href: "https://news.ltn.com.tw/list/breakingnews/life" },
@@ -34,6 +42,10 @@ const menuLinks = [
 ];
 
 export default function VideoChannelNav() {
+  const pathname = usePathname();
+  const isMobile = useIsMobile();
+
+  if (isMobile && pathname.startsWith("/shorts")) return null;
   return (
     <div className={style.ltnheader} data-desc="置頂選單">
       <div className={style.channel}>
