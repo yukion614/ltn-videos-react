@@ -14,9 +14,13 @@ const ReactPlayer = dynamic(() => import("react-player"), {
 
 const basePath = "https://video.ltn.com.tw/brand/api";
 
-// 來源未開 CORS，改走 next.config.ts 的同源代理（/hls/...）
+// 上游只對 *.ltn.com.tw 開 CORS：正式環境直接用原始網址；
+// 本機 dev（localhost）才走 next.config.ts 的同源代理 /hls/*
 function toProxiedHls(url: string) {
-  return url.replace("https://video.ltn.com.tw/media/", "/hls/");
+  if (process.env.NODE_ENV === "development") {
+    return url.replace("https://video.ltn.com.tw/media/", "/hls/");
+  }
+  return url;
 }
 
 async function fetchShorts(
@@ -25,6 +29,23 @@ async function fetchShorts(
   const endpoint = moreId ? `/shorts/${moreId}` : "/shorts";
   const res = await fetch(`${basePath}${endpoint}`);
   return res.json();
+}
+
+// 依 id 去重後把新一批接到既有清單後面。
+// 上游分頁（/shorts/{moreId}）可能回傳與前面重疊、或同一批內重複的短影音，
+// 不去重會讓 key={short.id} 撞 key，導致 React 警告與畫面重複。
+function mergeUniqueById(
+  prev: ShortsApiItem[],
+  incoming: ShortsApiItem[],
+): ShortsApiItem[] {
+  const seen = new Set(prev.map((s) => s.id));
+  const fresh: ShortsApiItem[] = [];
+  for (const s of incoming) {
+    if (seen.has(s.id)) continue;
+    seen.add(s.id);
+    fresh.push(s);
+  }
+  return fresh.length > 0 ? [...prev, ...fresh] : prev;
 }
 
 function buildShareUrls(url: string) {
@@ -135,7 +156,7 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
   useEffect(() => {
     fetchShorts()
       .then((data) => {
-        setItems(data.items);
+        setItems(mergeUniqueById([], data.items));
         setMoreId(data.moreId);
         setHasMore(data.hasMore);
       })
@@ -150,7 +171,7 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
     setLoadingMore(true);
     try {
       const data = await fetchShorts(moreId);
-      setItems((prev) => [...prev, ...data.items]);
+      setItems((prev) => mergeUniqueById(prev, data.items));
       setMoreId(data.moreId);
       setHasMore(data.hasMore);
     } finally {
@@ -323,9 +344,7 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
             const isActive = i === index;
             // 只渲染目前及相鄰兩則的細節，其餘僅佔位避免一次掛太多
             const isNear = Math.abs(i - index) <= 1;
-            const shareUrls = buildShareUrls(
-              short.articleUrl || short.watchUrl,
-            );
+            const shareUrls = buildShareUrls(short.watchUrl);
 
             return (
               <section className={styles.slide} key={short.id}>
@@ -494,14 +513,14 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
                     <h1 className={styles.dockTitle}>{short.title}</h1>
                     <p className={styles.dockSummary}>{short.summary}</p>
                     {/* 描述 */}
-                    {short.descriptionHtml && (
+                    {/* {short.descriptionHtml && (
                       <div
                         className={styles.mobilePanelBody}
                         dangerouslySetInnerHTML={{
                           __html: short.descriptionHtml,
                         }}
                       />
-                    )}
+                    )} */}
 
                     {isActive ? (
                       <button

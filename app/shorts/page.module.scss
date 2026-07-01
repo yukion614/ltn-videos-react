@@ -86,14 +86,12 @@ $nav-h: 160px;
   position: absolute;
   inset: 0;
   z-index: 1;
+  width: 100%;
+  height: 100%;
   background: transparent;
-
-  :global(iframe),
-  :global(video) {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+  // HLS 來源時內層 <video> 在 <hls-video> 的 shadow DOM，object-fit 由 --media-object-fit 控制
+  // （預設 contain）。設 cover 才會以高度填滿外框、左右裁切置中。
+  --media-object-fit: cover;
 }
 
 .playerLoading {
@@ -347,7 +345,7 @@ $nav-h: 160px;
   position: absolute;
   right: 10px;
   top: 50%;
-  z-index: 8; // 高於面板覆蓋層(6)，展開時仍可見
+  z-index: 8; // 收合時浮在影片上；展開時被面板(10)蓋過
   display: none;
   flex-direction: column;
   gap: 16px;
@@ -398,7 +396,7 @@ $nav-h: 160px;
 .dockTitle {
   margin: 0 0 8px;
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 800; // 桌機維持粗體
   line-height: 1.4;
 
   // text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
@@ -444,10 +442,46 @@ $nav-h: 160px;
   }
 }
 
+// 手機（≤768px）：Ltnheader 隱藏，上方只剩 Navbar 主列。
+// 把 --nav-h 改成實際導覽列高度（60px），並用 100dvh 避開手機網址列高度誤差，
+// 舞台才會真的填滿可視高度、下方不留白。
+@media (max-width: 768px) {
+  .stage {
+    --nav-h: 60px;
+    --slide-h: calc(100dvh - var(--nav-h));
+  }
+}
+
+// 更窄（≤640px）：Navbar 主列縮為 46px，nav 高度同步調整
+@media (max-width: 640px) {
+  .stage {
+    --nav-h: 46px;
+  }
+}
+
 // 視窗較窄：面板改為覆蓋在影片上方，用淡入＋上滑過場
 @media (max-width: 820px) {
+  // 手機版影片充滿舞台高度（移除 760px 上限與 48px 留白），寬度改為滿版
+  .slide {
+    --video-h: var(--slide-h);
+    --video-w: 100%;
+  }
+
+  // 手機改為滿版鋪滿：寬高都填滿視窗，影片以 cover 裁切。
+  // 不再用 9:16 換算寬度，避免換算出的寬度超過視窗、把彈出面板的圓角擠到畫面外。
   .viewer {
     position: relative;
+    width: 100%;
+  }
+
+  .videoCol {
+    width: 100%;
+  }
+
+  .video {
+    width: 100%;
+    aspect-ratio: auto; // 取消 9:16，寬高改由 viewer 決定（影片靠 object-fit:cover 填滿）
+    border-radius: 0; // 滿版貼齊螢幕邊，不留圓角
   }
 
   // 手機才顯示浮動分享列
@@ -455,15 +489,53 @@ $nav-h: 160px;
     display: flex;
   }
 
+  // 手機分享鍵縮小一點
+  .railBtn {
+    width: 36px;
+    height: 36px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    // LINE 鍵是 <img>（JSX 寫死 35px），這裡一起縮以維持與 fb/x 一致
+    img {
+      width: 28px;
+      height: 28px;
+    }
+  }
+
+  // 手機面板背景為深色，內文改白才看得清
+  .panelBody {
+    color: #fff;
+  }
+
+  // 收合資訊塢疊在影片上，文字改白（標題繼承、摘要另外蓋），加陰影確保可讀
+  .infoDock {
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+  }
+
+  .dockSummary {
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  // 手機標題改非粗體＋寬字距（桌機維持粗體）
+  .dockTitle {
+    font-weight: 400;
+    letter-spacing: 0.05em;
+  }
+
   .panel {
     position: absolute;
     // inset: 0;
-    z-index: 6;
+    z-index: 10; // 展開時面板最高，蓋過浮動分享列(8)
     width: 100% !important;
     height: auto;
     bottom: 0;
     border-radius: 14px 14px 0 0;
-    background: rgba(0, 0, 0, 0.75);
+    background: rgba(0, 0, 0, 0.92); // 加深、近不透明，圓角弧度才看得清楚
     color: #fff;
     transform: translateY(16px);
     pointer-events: none;
@@ -482,7 +554,8 @@ $nav-h: 160px;
 
   .panelInner {
     width: 100%;
-    padding: 14px;
+    // 底部加大留白（含手機安全區），內容不貼底、上方倒角才露得出來
+    padding: 24px 24px calc(28px + env(safe-area-inset-bottom));
   }
 
   .share {
@@ -496,7 +569,7 @@ $nav-h: 160px;
     right: auto; // 取消原本的 right，避免與 left 互相拉扯
     transform: translateX(-50%); // 往左退回自身一半寬 → 真正水平置中
     padding: calc(100% - 95%);
-    bottom: 26px; // 往上抬，空出底部給時間軸（避免視覺壓線）
+    bottom: 3px; // 漸層底貼齊時間軸（.seekBar 可見線 3px）上方
     background: linear-gradient(
       to top,
       rgba(0, 0, 0, 1) 0%,
@@ -510,7 +583,8 @@ $nav-h: 160px;
   .dockTitle {
     margin: 0 0 8px;
     font-size: var(--font-size-small);
-    font-weight: 800;
+    font-weight: 400; // 不使用粗體
+    letter-spacing: 0.05em; // 字距加寬
     line-height: 1.4;
     color: #fff;
   }
