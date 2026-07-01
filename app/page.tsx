@@ -5,49 +5,43 @@ import VideoPlayer from "./_components/VideoPlayer/VideoPlayer";
 import VideoThumbnail from "./_components/VideoThumbnail/VideoThumbnail";
 import ShortsRail from "./_components/ShortsRail/ShortsRail";
 import type { ShortsApiResponse, ShortsRailItem } from "./_interfaces/shorts";
-import type {
-  VideoListItem,
-  VideoListResponse,
-} from "./_interfaces/videoArticle";
+import type { VideoListItem } from "./_interfaces/videoArticle";
 import type { BrandVideoResponse } from "./_interfaces/BrandVideo";
+import type {
+  PlaylistListResponse,
+  PlaylistItemsResponse,
+  PlaylistVideoItem,
+  PlaylistEntry,
+  ProgramListResponse,
+  CongressLiveResponse,
+  CongressLiveItem,
+} from "./_interfaces/playlist";
+import { programMeta } from "./_lib/programMeta";
+import { toProxiedHls, watchUrlToSlug } from "./_lib/videoDetail";
 
-const topicVideos = [
-  ["12:48", "2026 九合一選舉最新民調出爐 六都選情激烈"],
-  ["01:56", "2026 選戰關鍵觀察：年輕族群成最大變數"],
-  ["02:08", "地方派系整合進度一次看 藍綠白布局解析"],
-  ["03:22", "六都市長候選人政見對決 重點懶人包"],
-  ["04:10", "選舉公報數位化 首投族最關心的三件事"],
-];
+// 節目卡片：清單資訊 + 首支影片的封面與連結
+type ProgramCard = PlaylistEntry & {
+  thumbnailUrl?: string;
+  watchUrl?: string;
+};
 
-const programs = [
-  ["政面交鋒", "每週一更新 · EP.124", "politics-faceoff"],
-  ["自由說新聞", "每週一更新 · EP.88", "liberty-talks"],
-  ["自由爆新聞", "每週二更新 · EP.96", "liberty-breaking"],
-  ["新聞360", "每週三更新 · EP.56", "news-360"],
-  ["官我什麼事", "每週四更新 · EP.42", "gov-matters"],
-  ["台海情勢簡報室", "每週五更新 · EP.30", "strait-brief"],
-  ["娛樂後視鏡", "每週六更新 · EP.18", "ent-rearview"],
-  ["名人開講", "每週一更新 · EP.110", "celeb-talks"],
-];
+// 依節目標題到 programMeta 找出 name === title 的那筆，取其 slug 組出 /programs/[slug] 連結；
+// 找不到時退回 /programs
+function toProgramHref(key: string | undefined, title: string) {
+  const slug = programMeta.find((program) => program.name === title)?.key;
+  // return slug ? `/programs/${slug}` : "/programs";
+  if (!slug) return "/programs";
 
-// 國會議程資料：每個議程帶自己的影片網址，isLive 為 true 時可被播放器讀取
-// url 支援 mp4 / hls(.m3u8) / YouTube 等 react-player 支援的來源
-interface AgendaItem {
-  name: string;
-  isLive: boolean;
-  url?: string;
+  const params = new URLSearchParams();
+
+  if (key) {
+    params.set("key", key);
+  }
+
+  return params.toString()
+    ? `/programs/${slug}?${params.toString()}`
+    : `/programs/${slug}`;
 }
-
-const agenda: AgendaItem[] = [
-  { name: "院會", isLive: true, url: "" },
-  { name: "外交及國防", isLive: false },
-  { name: "內政", isLive: false },
-  { name: "經濟", isLive: false },
-  { name: "教育及文化", isLive: true, url: "" },
-  { name: "交通", isLive: false },
-  { name: "司法及法制", isLive: false },
-  { name: "社福及衛環", isLive: true, url: "" },
-];
 
 function SectionHeader({
   category,
@@ -72,8 +66,9 @@ function SectionHeader({
           style={{
             background: "#e2231a",
             display: "inline-block",
+            lineHeight: 1,
             color: "#fff",
-            padding: "6px 12px 6px 12px",
+            padding: "8px 12px 6px 12px",
             borderRadius: "4px",
           }}
         >
@@ -85,7 +80,9 @@ function SectionHeader({
             display: "inline-block",
             width: "4px",
             background: "#e2231a",
-            minHeight: "24px",
+            borderRadius: "2px",
+            alignSelf: "stretch", // 紅線自動撐滿標題高度，標題多高紅線就多長
+            minHeight: "24px", // 最矮也有 24px，避免標題很小時紅線太短
           }}
         />
       )}
@@ -131,43 +128,73 @@ export default function Home() {
   const [mainVideos, setMainVideos] = useState<VideoListItem[]>([]); //mainVedios
   const [leadVideo, setLeadVideo] = useState<number | 0>(0); //預設第一隻影片
   const [shorts, setShorts] = useState<ShortsRailItem[]>([]); //shorts
+  const [topicVideos, setTopicVideos] = useState<PlaylistVideoItem[]>([]); //話題影片
+  const [topicTitle, setTopicTitle] = useState("話題"); //話題標題
+  const [programCards, setProgramCards] = useState<ProgramCard[]>([]); //節目
+  const [programTitle, setProgramTitle] = useState("節目"); //節目區標題
+  const [congress, setCongress] = useState<CongressLiveResponse | null>(null); //國會直播
   const basePath = "https://video.ltn.com.tw/brand/api";
 
+  // 國會議程：來自 congress-live 的 items
+  const agenda: CongressLiveItem[] = congress?.items ?? [];
   // 目前選中的議程：預設抓第一個 LIVE 的議程；點擊其他 LIVE 議程可切換
-  const firstLiveIndex = agenda.findIndex((item) => item.isLive); //索引值
-  const [activeAgenda, setActiveAgenda] = useState(firstLiveIndex);
+  const [activeAgenda, setActiveAgenda] = useState(0);
   const currentAgenda = agenda[activeAgenda];
-  // const currentAgenda = null;
+  // 「其他議程」清單是否展開
+  const [agendaOpen, setAgendaOpen] = useState(false);
+  // 只有後端標記 visible 且有議程時才顯示整個國會直播區塊
+  const showCongress = Boolean(congress?.visible) && agenda.length > 0;
 
-  async function fetchMainVideo() {
-    const url = `${basePath}/list`;
-    const limit = 7;
-    const res = await fetch(url);
-    let data: VideoListResponse = await res.json();
+  // 抓首頁播放清單列表（首頁所有區塊的入口）
+  async function fetchPlaylistList() {
+    const res = await fetch(`${basePath}/playlist-list/home`);
+    const data: PlaylistListResponse = await res.json();
+    return data;
+  }
 
-    const items = await Promise.all(
-      data.items.slice(0, limit).map(async (item) => {
-        const detailUrl = `${basePath}/video/${item.id}`;
-        const detailRes = await fetch(detailUrl);
-        const detailData: BrandVideoResponse = await detailRes.json();
+  // 抓節目清單（節目區專用，扁平 items）
+  async function fetchProgramList() {
+    const res = await fetch(`${basePath}/playlist-list/program`);
+    const data: ProgramListResponse = await res.json();
+    return data;
+  }
+
+  // 取得某份清單的影片項目
+  async function fetchPlaylistItems(apiUrl: string) {
+    const res = await fetch(apiUrl);
+    const data: PlaylistItemsResponse = await res.json();
+    return data.items;
+  }
+
+  // 「影音精選」主播放器：取前 limit 隻並補上 hlsUrl（播放器需要）
+  async function fetchFeaturedVideos(apiUrl: string, limit = 7) {
+    const items = await fetchPlaylistItems(apiUrl);
+
+    return Promise.all(
+      items.slice(0, limit).map(async (item) => {
+        // 詳情 API 以 watchUrl 內的 slug 為 key，用數字 id 會得到空陣列
+        const slug = watchUrlToSlug(item.watchUrl);
+        const detailData: BrandVideoResponse | null = slug
+          ? await fetch(`${basePath}/video/${slug}`).then((r) => r.json())
+          : null;
+        // 詳情可能取不到 video（影片下架／回應異常）：補上空 hlsUrl 不讓整頁崩潰
+        const rawHlsUrl = detailData?.video?.hlsUrl ?? "";
 
         return {
           ...item,
-          // 換成同源 proxy 路徑，繞過來源未開 CORS 的限制（對應 next.config 的 /hls rewrite）
-          hlsUrl: detailData.video.hlsUrl.replace(
-            "https://video.ltn.com.tw/media/",
-            "/hls/",
-          ),
+          // 上游只對 *.ltn.com.tw 開 CORS：正式環境直接用原始網址；
+          // 本機 dev 才換成同源 proxy 路徑（對應 next.config 的 /hls rewrite）
+          hlsUrl: toProxiedHls(rawHlsUrl) ?? "",
         };
       }),
     );
+  }
 
-    return {
-      data: {
-        ...data,
-        items,
-      },
-    };
+  // 取得國會直播議程資料（visible / onplay / items）
+  async function fetchCongressLive(apiUrl: string) {
+    const res = await fetch(apiUrl);
+    const data: CongressLiveResponse = await res.json();
+    return data;
   }
 
   async function fetchShorts(moreId = null) {
@@ -183,9 +210,55 @@ export default function Home() {
       if (res.data?.items) setShorts(res.data.items);
     });
 
-    fetchMainVideo().then((res) => {
-      console.log(res.data.items);
-      setMainVideos(res.data.items);
+    // 抓一次播放清單列表，分別供「影音精選」主播放器與「話題」區使用
+    fetchPlaylistList().then((listData) => {
+      // 影音精選：取 main 區塊的第一份清單
+      const featured = listData.sections.main?.items[0];
+      if (featured) {
+        fetchFeaturedVideos(featured.apiUrl).then(setMainVideos);
+      }
+
+      // 話題：取 topic 區塊的第一份清單
+      const topicEntry = listData.sections.topic?.items[0];
+      if (topicEntry) {
+        setTopicTitle(topicEntry.title);
+        fetchPlaylistItems(topicEntry.apiUrl).then(setTopicVideos);
+      }
+
+      // 國會直播：取 congress 區塊的第一份清單，依其 apiUrl 抓議程資料
+      const congressEntry = listData.sections.congress?.items[0];
+      if (congressEntry) {
+        fetchCongressLive(congressEntry.apiUrl).then((data) => {
+          setCongress(data);
+          // 預設選中直播中的議程：優先 onplay，其次任一非 off，都沒有才退回第一筆
+          const onplayIndex = data.items.findIndex(
+            (item) => item.status === "onplay",
+          );
+          const firstLive =
+            onplayIndex >= 0
+              ? onplayIndex
+              : data.items.findIndex((item) => item.status !== "off");
+          setActiveAgenda(firstLive >= 0 ? firstLive : 0);
+        });
+      }
+    });
+
+    // 節目：改用 playlist-list/program，每份清單用首支影片當封面
+    fetchProgramList().then((programData) => {
+      if (programData.title) {
+        setProgramTitle(programData.title);
+      }
+      const programEntries = programData.items ?? [];
+      Promise.all(
+        programEntries.map(async (entry) => {
+          const items = await fetchPlaylistItems(entry.apiUrl);
+          return {
+            ...entry,
+            thumbnailUrl: items[0]?.thumbnailUrl,
+            watchUrl: items[0]?.watchUrl,
+          };
+        }),
+      ).then(setProgramCards);
     });
   }, []);
 
@@ -292,24 +365,30 @@ export default function Home() {
         <div className={styles.wrap}>
           <SectionHeader
             category="話題"
-            title="2026 九合一選舉"
+            title={topicTitle}
             // en="Topic"
             more="更多影片 ›"
             moreUrl="/topic"
           />
           <div className={styles.topicGrid}>
-            <VideoThumbnail
-              variant={"overlay"}
-              title={"2026 九合一選舉"}
-              duration="12:48"
-            />
+            {topicVideos[0] ? (
+              <VideoThumbnail
+                variant={"overlay"}
+                title={topicVideos[0].title}
+                src={topicVideos[0].thumbnailUrl}
+                slug={`/topic/video/${watchUrlToSlug(topicVideos[0].watchUrl) ?? topicVideos[0].id}`}
+                alt={topicVideos[0].title}
+              />
+            ) : null}
             <div className={styles.topicList}>
-              {topicVideos.slice(1).map(([duration, title], index) => (
+              {topicVideos.slice(1, 5).map((video) => (
                 <VideoThumbnail
-                  key={index}
-                  variant={"stacked"}
-                  title={title}
-                  duration={duration}
+                  key={video.id}
+                  variant={"row"}
+                  title={video.title}
+                  src={video.thumbnailUrl}
+                  slug={`/topic/video/${watchUrlToSlug(video.watchUrl) ?? video.id}`}
+                  alt={video.title}
                 />
               ))}
             </div>
@@ -328,14 +407,17 @@ export default function Home() {
       {/* 節目 */}
       <section className={styles.section}>
         <div className={styles.wrap}>
-          <SectionHeader title="節目" en="Programs" />
+          <SectionHeader title={programTitle} en="Programs" />
           <div className={styles.programGrid}>
-            {programs.map(([title, meta, slug], index) => (
+            {programCards.map((program) => (
               <VideoThumbnail
-                key={index}
+                key={program.id}
                 variant={"overlay"}
-                title={title}
-                meta={meta}
+                title={program.title}
+                meta={`${program.count} 部影片`}
+                src={program.thumbnailUrl}
+                slug={toProgramHref(program.key, program.title)}
+                alt={program.title}
               />
             ))}
           </div>
@@ -369,22 +451,23 @@ export default function Home() {
           </div>
         </div>
       </section> */}
-      {/* 國會直播 */}
-      {currentAgenda?.isLive && (
+      {/* 國會直播：congress-live 無資料（visible=false 或 items 為空）時整個區塊不顯示 */}
+      {showCongress && (
         <section className={styles.section}>
           <div className={styles.wrap}>
             <SectionHeader
               title="國會直播"
               en="Parliament"
               more="更多影片 ›"
-              moreUrl="https://news.ltn.com.tw/video/ly"
+              moreUrl={congress?.moreUrl ?? "https://news.ltn.com.tw/video/ly"}
             />
 
             <div className={styles.parliamentGrid}>
               {/* 直播畫面 */}
               <div className={styles.parliamentPlayer}>
-                {currentAgenda.url ? (
+                {currentAgenda?.url ? (
                   <VideoPlayer
+                    key={currentAgenda.url}
                     src={currentAgenda.url}
                     poster=""
                     title={currentAgenda.name}
@@ -395,37 +478,80 @@ export default function Home() {
                     tone={7}
                   />
                 )}
-                {currentAgenda?.isLive ? (
+                {currentAgenda && currentAgenda.status !== "off" ? (
                   <span className={styles.liveBadge}>LIVE</span>
                 ) : null}
               </div>
-              {/* 直播選項 */}
-              <div className={styles.agenda}>
+              {/* 直播選項：桌機完整列出；行動版收合，只顯示目前議程 + 「其他議程」展開 */}
+              <div
+                className={`${styles.agenda} ${
+                  agendaOpen ? styles.agendaExpanded : ""
+                }`}
+              >
                 <div className={styles.agendaHeader}>
                   目前議程 <span>Live</span>
                 </div>
-                {agenda.map((item, index) => (
-                  <a
-                    href="#"
-                    className={`${styles.agendaItem} ${
-                      index === activeAgenda ? styles.agendaItemActive : ""
-                    }`}
-                    key={item.name}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (item.isLive) setActiveAgenda(index);
-                    }}
-                  >
-                    <span>{item.name}</span>
-                    <strong
-                      className={
-                        item.isLive ? styles.agendaLive : styles.agendaOff
-                      }
+                {agenda.map((item, index) => {
+                  // 後端有 onplay(PLAY) 與 p_live(LIVE) 兩種直播狀態，只有 off 才不可點選
+                  const isLive = item.status !== "off";
+                  return (
+                    <a
+                      href="#"
+                      className={`${styles.agendaItem} ${
+                        index === activeAgenda ? styles.agendaItemActive : ""
+                      } ${isLive ? "" : styles.agendaItemDisabled}`}
+                      key={item.id}
+                      aria-disabled={!isLive}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        // 只有直播中的議程可點選播放
+                        if (isLive) {
+                          setActiveAgenda(index);
+                          setAgendaOpen(false);
+                        }
+                      }}
                     >
-                      {item.isLive ? "LIVE" : "OFF"}
-                    </strong>
-                  </a>
-                ))}
+                      <span>{item.name}</span>
+                      <strong
+                        className={
+                          isLive ? styles.agendaLive : styles.agendaOff
+                        }
+                      >
+                        {item.statusText}
+                      </strong>
+                    </a>
+                  );
+                })}
+
+                {/* 展開 / 收合切換（僅行動版顯示） */}
+                {agenda.length > 1 ? (
+                  <button
+                    type="button"
+                    className={styles.agendaToggle}
+                    onClick={() => setAgendaOpen((prev) => !prev)}
+                    aria-expanded={agendaOpen}
+                  >
+                    {agendaOpen ? "收合" : "其他議程"}
+                    <svg
+                      className={`${styles.agendaChevron} ${
+                        agendaOpen ? styles.agendaChevronOpen : ""
+                      }`}
+                      viewBox="0 0 24 24"
+                      width="18"
+                      height="18"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M6 9l6 6 6-6"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                ) : null}
               </div>
             </div>
           </div>

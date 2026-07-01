@@ -261,7 +261,7 @@
 
 .topicList {
   display: grid;
-  gap: 0;
+  gap: 16px;
 }
 
 .topicMini {
@@ -471,6 +471,7 @@
   color: var(--text);
   font-size: 14px;
   font-weight: 700;
+  cursor: pointer;
 
   &:last-child {
     border-bottom: 0;
@@ -481,6 +482,15 @@
   }
 }
 
+// 非直播中的議程不可點選切換
+.agendaItemDisabled {
+  cursor: default;
+
+  &:hover {
+    background: transparent;
+  }
+}
+
 .agendaItemActive {
   background: #ffd400;
   color: #111;
@@ -488,6 +498,16 @@
   &:hover {
     background: #ffd400;
   }
+}
+
+// 行動版預設收合：只顯示目前選中的議程，其餘靠「其他議程」展開
+.agendaItem:not(.agendaItemActive) {
+  display: none;
+}
+
+// 展開後顯示全部議程
+.agendaExpanded .agendaItem {
+  display: flex;
 }
 
 .agendaLive,
@@ -521,6 +541,38 @@
   &::before {
     background: var(--text-mute);
   }
+}
+
+// 「其他議程」展開 / 收合按鈕
+.agendaToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--hover);
+  }
+}
+
+.agendaChevron {
+  fill: none;
+  stroke: currentColor;
+  transition: transform 0.2s ease;
+}
+
+.agendaChevronOpen {
+  transform: rotate(180deg);
 }
 
 .media {
@@ -780,8 +832,14 @@
     flex-direction: column;
   }
 
-  .agendaItem {
+  // 桌機：完整列出所有議程，不收合、不顯示展開鈕
+  .agenda .agendaItem {
+    display: flex;
     flex: 1;
+  }
+
+  .agendaToggle {
+    display: none;
   }
 }
 
