@@ -16,6 +16,9 @@ interface VideoPlayerProps {
   width?: number | string;
   height?: number | string;
   allowFullscreen?: boolean; // 是否顯示全螢幕鍵（首頁、短影音不需要）
+  // 標題疊放位置：預設 "bottom"（暫停時才顯示於底部）；
+  // "top" 則固定疊在影片上方且播放中也持續顯示（控制軸仍在底部）
+  titlePosition?: "top" | "bottom";
 }
 
 // 跨瀏覽器的全螢幕 API 型別（含 Safari/舊版 webkit 前綴）
@@ -40,6 +43,7 @@ export default function VideoPlayer({
   width = "100%",
   height = "auto",
   allowFullscreen = false,
+  titlePosition = "bottom",
 }: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(true); // 是否正在播放（預設 true → 自動播放）
   const [currentTime, setCurrentTime] = useState(0); // 目前播放秒數
@@ -314,7 +318,16 @@ export default function VideoPlayer({
         <div className={styles.fullscreenStandalone}>{fullscreenButton}</div>
       ) : null}
 
-      {title && !isPlaying ? (
+      {/* 標題疊放於上方：播放中也持續顯示（控制軸仍在底部） */}
+      {title && titlePosition === "top" ? (
+        <>
+          <span className={styles.gradientTop} aria-hidden="true" />
+          <span className={styles.mediaTitleTop}>{title}</span>
+        </>
+      ) : null}
+
+      {/* 標題疊放於底部：僅暫停時顯示（首頁 / 詳情頁預設行為） */}
+      {title && titlePosition === "bottom" && !isPlaying ? (
         <>
           <span className={styles.gradient} aria-hidden="true" />
           <span className={styles.mediaTitle}>{title}</span>

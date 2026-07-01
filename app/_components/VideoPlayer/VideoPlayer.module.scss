@@ -153,3 +153,32 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
 }
+
+// 上方標題：固定疊在影片頂部，播放中也持續顯示
+.gradientTop {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  height: 42%;
+  background: linear-gradient(rgba(0, 0, 0, 0.82), transparent);
+  pointer-events: none;
+}
+
+.mediaTitleTop {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 3;
+  display: -webkit-box;
+  overflow: hidden;
+  padding: 12px 14px 40px;
+  color: #fff;
+  font-size: var(--player-title-size, 16px);
+  font-weight: 800;
+  line-height: 1.42;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}

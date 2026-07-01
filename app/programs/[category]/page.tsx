@@ -21,8 +21,11 @@ import type {
 } from "@/app/_interfaces/playlist";
 import styles from "./page.module.scss";
 import VedoThumbnail from "@/app/_components/VideoThumbnail/VideoThumbnail";
+import VideoPlayer from "@/app/_components/VideoPlayer/VideoPlayer";
 import { programMeta, programKeys } from "@/app/_lib/programMeta";
-import { watchUrlToSlug } from "@/app/_lib/videoDetail";
+import { watchUrlToSlug, toProxiedHls } from "@/app/_lib/videoDetail";
+import type { BrandVideoResponse } from "@/app/_interfaces/BrandVideo";
+import { useIsMobile } from "@/app/hooks/useIsMobile";
 
 const basePath = "https://video.ltn.com.tw/brand/api";
 
@@ -157,6 +160,19 @@ function CategoryContent() {
   const program = programIndex >= 0 ? programs[programIndex] : undefined;
   const isValid = validKeys.includes(slug);
   const [thumbnailPool, setThumbnailPool] = useState<VideoListItem[]>([]);
+  // 第一則影片的播放網址（列表 API 不含 hlsUrl，需另打詳情補上）
+  const [leadHls, setLeadHls] = useState<string>("");
+  // 手機版：第一則播放器滑過頂端後固定在最上層
+  const isMobile = useIsMobile(759);
+  const leadWrapRef = useRef<HTMLDivElement | null>(null);
+  const leadSentinelRef = useRef<HTMLDivElement | null>(null);
+  const [leadStuck, setLeadStuck] = useState(false);
+  // 播放器原始位置與尺寸：固定時沿用，維持原本大小與水平位置
+  const [leadBox, setLeadBox] = useState<{
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [nextPage, setNextPage] = useState<number | null>(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -309,6 +325,82 @@ function CategoryContent() {
     return () => observer.disconnect();
   }, [fetchPlaylistPage, loadingMore, nextPage]);
 
+  // 第一則影片改用播放器：列表資料沒有 hlsUrl，需以 watchUrl 的 slug 另打詳情補上
+  const leadItem = thumbnailPool[0];
+  const leadSlug = leadItem
+    ? watchUrlToSlug(leadItem.watchUrl) ?? String(leadItem.id)
+    : "";
+
+  useEffect(() => {
+    if (!leadSlug) {
+      setLeadHls("");
+      return;
+    }
+
+    let cancelled = false;
+    setLeadHls("");
+    fetch(`${basePath}/video/${leadSlug}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((detail: BrandVideoResponse | null) => {
+        if (cancelled) return;
+        // 詳情可能取不到 video（下架／異常），補空字串讓畫面退回縮圖
+        setLeadHls(toProxiedHls(detail?.video?.hlsUrl ?? "") ?? "");
+      })
+      .catch(() => {
+        if (!cancelled) setLeadHls("");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [leadSlug]);
+
+  // 量測播放器原始位置／尺寸（未固定時），固定時沿用並以等高佔位避免版面跳動
+  useEffect(() => {
+    if (!isMobile || !leadHls || leadStuck) return;
+    const el = leadWrapRef.current;
+    if (!el) return;
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      setLeadBox({ left: rect.left, width: rect.width, height: rect.height });
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [isMobile, leadHls, leadStuck]);
+
+  // 手機版：以哨兵偵測播放器是否滑到 navbar 下緣，是則固定在 navbar 下方
+  useEffect(() => {
+    if (!isMobile || !leadHls) {
+      setLeadStuck(false);
+      return;
+    }
+    const sentinel = leadSentinelRef.current;
+    if (!sentinel) return;
+
+    // 讀取 navbar 高度（globals.css 的 --navbar-height），作為固定的頂端偏移
+    const navH =
+      parseInt(
+        getComputedStyle(document.documentElement).getPropertyValue(
+          "--navbar-height",
+        ),
+        10,
+      ) || 44;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setLeadStuck(
+          !entry.isIntersecting && entry.boundingClientRect.top < navH,
+        );
+      },
+      // 把偵測線下移到 navbar 下緣，讓播放器一到 navbar 下方就固定
+      { threshold: 0, rootMargin: `-${navH}px 0px 0px 0px` },
+    );
+    observer.observe(sentinel);
+
+    return () => observer.disconnect();
+  }, [isMobile, leadHls]);
+
   const episodes = useMemo(() => {
     const currentProgram = program || programs[0];
     return thumbnailPool.map(
@@ -372,6 +464,64 @@ function CategoryContent() {
           <section className={styles.feed} aria-label="節目影片列表">
             {episodes.map((item, index) => {
               const role = slotRole(index);
+
+              // 第一則：改用播放器並自動播放；hlsUrl 還沒補到前先顯示大圖縮圖
+              if (index === 0) {
+                return (
+                  <div key={item.id} className={styles.big}>
+                    {leadHls ? (
+                      <>
+                        {/* 哨兵：偵測播放器是否滑過視窗頂端（手機版固定用） */}
+                        <div
+                          ref={leadSentinelRef}
+                          className={styles.leadSentinel}
+                          aria-hidden="true"
+                        />
+                        {/* 固定時以等高佔位，避免下方內容往上跳 */}
+                        {leadStuck && leadBox ? (
+                          <div
+                            style={{ height: leadBox.height }}
+                            aria-hidden="true"
+                          />
+                        ) : null}
+                        <div
+                          ref={leadWrapRef}
+                          style={
+                            leadStuck && leadBox
+                              ? {
+                                  position: "fixed",
+                                  top: "var(--navbar-height)",
+                                  left: leadBox.left,
+                                  width: leadBox.width,
+                                  zIndex: 30,
+                                }
+                              : undefined
+                          }
+                        >
+                          <VideoPlayer
+                            src={leadHls}
+                            poster=""
+                            title={item.title}
+                            titlePosition="top"
+                            allowFullscreen
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <VedoThumbnail
+                        variant="overlay"
+                        fill
+                        title={item.title}
+                        duration={item.duration}
+                        meta={`${item.date} · ${item.views}`}
+                        slug={item.href}
+                        src={item.thumbnailUrl}
+                        alt={item.title}
+                      />
+                    )}
+                  </div>
+                );
+              }
 
               if (role === "big" || role === "medium") {
                 return (
