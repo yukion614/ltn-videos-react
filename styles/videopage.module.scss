@@ -1,0 +1,412 @@
+.page {
+  min-height: 100vh;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font);
+}
+
+.wrap {
+  width: min(100% - var(--container-gutter), var(--container-max));
+  margin: 0 auto;
+  padding: 18px 0 42px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  &::before {
+    content: "";
+    flex: none;
+    width: 4px;
+    background: #e2231a;
+    height: 1em;
+  }
+}
+
+.playerSection {
+  overflow: hidden;
+  border-radius: 8px;
+  background: #000;
+  box-shadow: var(--shadow);
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 24px;
+  align-items: start;
+  padding: 24px 0 8px;
+}
+
+.article {
+  min-width: 0;
+}
+
+.articleHeader {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+
+  h1 {
+    max-width: 920px;
+    margin: 0;
+    color: var(--text);
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 1.28;
+  }
+}
+
+.meta {
+  margin: 0;
+  color: var(--text-mute);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--text-2);
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+  }
+}
+
+.mobileShare {
+  display: none;
+}
+
+.newsLink {
+  display: inline-flex;
+  margin: 18px 0 0;
+  color: var(--hyperlink);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.5;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+.articleContent {
+  max-width: 880px;
+  margin-top: 18px;
+  // color: #202026;
+  color: var(--color-text);
+  font-size: 18px;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+
+  p {
+    margin: 0 0 18px;
+  }
+
+  a {
+    color: var(--red);
+    font-weight: 800;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
+.pageNav {
+  display: grid;
+  gap: 10px;
+  max-width: 880px;
+  margin-top: 22px;
+
+  a {
+    display: block;
+    overflow: hidden;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.45;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &:hover {
+      border-color: rgba(226, 35, 26, 0.35);
+      color: var(--red);
+    }
+  }
+}
+
+.shareRail {
+  position: sticky;
+  top: 88px;
+  display: grid;
+  gap: 10px;
+}
+
+.shareButton {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  color: #fff;
+  text-decoration: none;
+  transition:
+    transform 0.18s ease,
+    filter 0.18s ease;
+
+  svg {
+    width: 21px;
+    height: 21px;
+    fill: currentColor;
+  }
+
+  &:hover {
+    filter: brightness(0.95);
+    transform: translateY(-1px);
+  }
+}
+
+.line {
+  background: #06c755;
+}
+
+.facebook {
+  background: #1877f2;
+}
+
+.x {
+  background: #111;
+}
+
+.recommend {
+  margin-top: 30px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+
+  h2 {
+    margin: 0 0 16px;
+    color: var(--color-text);
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 1.2;
+  }
+}
+
+.recommendGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px 16px;
+}
+
+.recommendCard {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+
+  strong {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--color-text-strong);
+    font-size: 15px;
+    font-weight: 850;
+    letter-spacing: 0;
+    line-height: 1.45;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  small {
+    display: block;
+    overflow: hidden;
+    color: var(--text-mute);
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &:hover strong {
+    color: var(--red);
+  }
+}
+
+.thumb {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  background: #1d1e26;
+
+  img {
+    object-fit: cover;
+    transition: transform 0.24s ease;
+  }
+}
+
+.recommendCard:hover .thumb img {
+  transform: scale(1.04);
+}
+
+.playBadge {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.68);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+}
+
+// 桌機「看更多」按鈕容器
+.moreWrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}
+
+.moreButton {
+  padding: 10px 32px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-strong);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease,
+    background 0.18s ease;
+
+  &:hover:not(:disabled) {
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
+// 手機無限滾動哨兵（不佔視覺空間）
+.moreSentinel {
+  width: 100%;
+  height: 1px;
+}
+
+.crumbs {
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .detailGrid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .shareRail {
+    display: none;
+  }
+
+  .mobileShare {
+    display: flex;
+    gap: 10px;
+  }
+
+  .recommendGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .shareButton {
+    border-radius: 999px;
+  }
+}
+
+@media (max-width: 640px) {
+  .wrap {
+    width: min(100% - var(--container-gutter-mobile), var(--container-max));
+    padding-top: 12px;
+  }
+
+  .crumbs {
+    font-size: 12px;
+  }
+
+  .playerSection {
+    margin-right: -12px;
+    margin-left: -12px;
+    border-radius: 0;
+    position: sticky;
+    top: var(--navbar-height);
+    z-index: 99;
+  }
+
+  // 滿版時把內層 player wrapper 的圓角也拿掉（手機不需要四個圓角）
+  .playerSection > div {
+    border-radius: 0;
+  }
+
+  .detailGrid {
+    padding-top: 18px;
+  }
+
+  .articleHeader {
+    h1 {
+      font-size: 24px;
+      line-height: 1.34;
+    }
+  }
+
+  .articleContent {
+    font-size: 16px;
+    line-height: 1.8;
+  }
+
+  .recommendGrid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 16px 12px;
+  }
+
+  .recommendCard {
+    strong {
+      font-size: 14px;
+    }
+  }
+}
