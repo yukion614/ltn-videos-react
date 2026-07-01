@@ -102,14 +102,13 @@
   position: absolute;
   inset: 0;
   z-index: 1;
+  width: 100%;
+  height: 100%;
   background: transparent; // 影片畫面出現前讓底下的封面透出來
-
-  :global(iframe),
-  :global(video) {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+  // HLS 來源時 react-player v3 渲染的是 <hls-video> 自訂元素，真正的 <video> 在 shadow DOM，
+  // 其 object-fit 由 CSS 變數 --media-object-fit 控制（預設 contain → 橫式影片會留黑邊變小）。
+  // 設成 cover 才會以高度填滿外框、左右裁切置中（CSS 變數會繼承進 shadow DOM）。
+  --media-object-fit: cover;
 }
 
 .playerLoading {
@@ -144,6 +143,8 @@
   font-size: 13px;
   font-weight: 800;
   line-height: 1.45;
+  // 固定保留 2 行高度：1 行與 2 行的標題都佔一樣高，疊在底部時上緣才會對齊
+  min-height: calc(1.45em * 2);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
