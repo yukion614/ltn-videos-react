@@ -4,6 +4,7 @@ import Link from "next/link";
 import styles from "@/styles/listpage.module.scss";
 import Crumb from "../_components/Crumb/Crumb";
 import { useInfiniteVideos } from "../hooks/useInfiniteVideos";
+import { watchUrlToSlug } from "../_lib/videoDetail";
 
 const crumbs = [
   {
@@ -40,7 +41,7 @@ export default function LatestPage() {
           <div className={styles.grid}>
             {videos.map((video) => (
               <Link
-                href={video.articleUrl || "#"}
+                href={`/topic/video/${watchUrlToSlug(video.watchUrl) ?? video.id}`}
                 className={styles.card}
                 key={video.id}
               >
