@@ -8,11 +8,11 @@ export default function VideoPlayer({
   meta,
   slug = "#",
   src = "https://img.youtube.com/vi/cqlHFJMg_0A/mqdefault.jpg",
-  alt = "2026 九合一選舉",
+  alt = "標題",
   fill = false,
   className,
 }: {
-  variant: "overlay" | "stacked";
+  variant: "overlay" | "stacked" | "row";
   title: string;
   duration?: string;
   meta?: string;
@@ -26,7 +26,11 @@ export default function VideoPlayer({
   return (
     <Link
       href={slug}
-      className={[styles.topicLead, fill ? styles.fill : "", className]
+      className={[
+        variant === "row" ? styles.topicRow : styles.topicLead,
+        fill ? styles.fill : "",
+        className,
+      ]
         .filter(Boolean)
         .join(" ")}
     >
@@ -55,7 +59,7 @@ export default function VideoPlayer({
           </>
         )}
       </div>
-      {title && variant === "stacked" && (
+      {title && variant !== "overlay" && (
         <strong className={styles.topicTitle}>{title}</strong>
       )}
     </Link>

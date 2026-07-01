@@ -107,3 +107,40 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+
+/* row 變體：行動版為「左縮圖 + 右標題」橫向列；桌機回到直向堆疊（與 stacked 一致） */
+.topicRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  box-sizing: border-box;
+
+  .topicMini {
+    width: 140px;
+    flex-shrink: 0;
+  }
+
+  .topicTitle {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+  }
+}
+
+@media (min-width: 760px) {
+  .topicRow {
+    display: block;
+
+    .topicMini {
+      width: 100%;
+    }
+
+    .topicTitle {
+      margin: 10px 0 12px;
+    }
+  }
+}
