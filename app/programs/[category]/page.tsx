@@ -1,40 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Crumb from "@/app/_components/Crumb/Crumb";
 import type {
   VideoListItem,
   VideoListResponse,
 } from "@/app/_interfaces/videoArticle";
+import type {
+  ProgramListResponse,
+  PlaylistEntry,
+} from "@/app/_interfaces/playlist";
 import styles from "./page.module.scss";
 import VedoThumbnail from "@/app/_components/VideoThumbnail/VideoThumbnail";
+import { programMeta, programKeys } from "@/app/_lib/programMeta";
+import { watchUrlToSlug } from "@/app/_lib/videoDetail";
 
 const basePath = "https://video.ltn.com.tw/brand/api";
 
-const programs = [
-  { name: "政面交鋒", update: "每週一更新", ep: 124, slug: "politics-faceoff" },
-  { name: "自由說新聞", update: "每週一更新", ep: 88, slug: "liberty-talks" },
-  {
-    name: "自由爆新聞",
-    update: "每週二更新",
-    ep: 96,
-    slug: "liberty-breaking",
-  },
-  { name: "新聞360", update: "每週三更新", ep: 56, slug: "news-360" },
-  { name: "官我什麼事", update: "每週四更新", ep: 42, slug: "gov-matters" },
-  {
-    name: "台海情勢簡報室",
-    update: "每週五更新",
-    ep: 30,
-    slug: "strait-brief",
-  },
-  { name: "娛樂後視鏡", update: "每週六更新", ep: 18, slug: "ent-rearview" },
-  { name: "名人開講", update: "每週一更新", ep: 110, slug: "celeb-talks" },
-] as const;
-
-const validSlugs = programs.map((program) => program.slug) as string[];
+const programs = programMeta;
+const validKeys = programKeys;
 
 const episodeSeeds = [
   {
@@ -145,7 +138,7 @@ type ProgramEpisode = {
 };
 
 /**
- * 版型輪迴規則（4 欄網格 + grid-auto-flow: dense）：
+ * 版型輪迴規則（4 欄網格）：
  * - index 0：大圖（跨 3 欄 × 2 列）→ 旁邊 2 張縮圖 + 下方兩列各 4 張＝整段 11 個
  * - 之後每段：中圖（跨 2 欄 × 2 列）→ 旁邊 4 張縮圖 + 下方兩列各 4 張＝整段 13 個
  *   （大段 11 個之後，以 13 個為一個週期不斷重複中圖段）
@@ -156,19 +149,21 @@ function slotRole(index: number): "big" | "medium" | "normal" {
   return "normal";
 }
 
-const INITIAL_COUNT = 38;
-const LOAD_STEP = 26;
-
-export default function Page() {
+function CategoryContent() {
   const params = useParams();
   const router = useRouter();
   const slug = getSlug(params.category);
-  const programIndex = programs.findIndex((program) => program.slug === slug);
+  const programIndex = programs.findIndex((program) => program.key === slug);
   const program = programIndex >= 0 ? programs[programIndex] : undefined;
-  const isValid = validSlugs.includes(slug);
+  const isValid = validKeys.includes(slug);
   const [thumbnailPool, setThumbnailPool] = useState<VideoListItem[]>([]);
-  const [visibleCount, setVisibleCount] = useState(INITIAL_COUNT);
+  const [nextPage, setNextPage] = useState<number | null>(1);
+  const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const fetchingRef = useRef(false);
+  const activeKeyRef = useRef<string | null>(null);
+  const searchParams = useSearchParams();
+  const key = searchParams.get("key");
 
   useEffect(() => {
     if (!isValid) {
@@ -178,91 +173,158 @@ export default function Page() {
 
   // 切換節目時重置無限滾動的數量
   useEffect(() => {
-    setVisibleCount(INITIAL_COUNT);
-  }, [slug]);
+    activeKeyRef.current = key;
+    fetchingRef.current = false;
+    setThumbnailPool([]);
+    setNextPage(key ? 1 : null);
+  }, [slug, key]);
 
-  useEffect(() => {
-    if (!isValid) {
-      return;
-    }
+  const fetchPlaylistPage = useCallback(
+    async (page: number, replace = false) => {
+      //if (!isValid || !key || fetchingRef.current) {
+      if (!isValid || fetchingRef.current) {
+        return;
+      }
 
-    let ignore = false;
+      fetchingRef.current = true;
+      activeKeyRef.current = key;
+      setLoadingMore(true);
 
-    async function fetchThumbnails() {
       try {
-        const res = await fetch(`${basePath}/list`);
+        let res: Response;
+        console.log("dont have key :", key);
+        // 情況 A：網址沒有帶 key，先用 program 名字去抓對應的 apiUrl
+        if (!key) {
+          console.log("dont have key :");
+          const listRes = await fetch(`${basePath}/playlist-list/program`);
+          if (!listRes.ok) throw new Error("撈取節目清單失敗");
 
+          const listData = await listRes.json();
+          const matchedItem = listData?.items?.find(
+            (item: any) => item.title === program?.name,
+          );
+
+          const apiUrl = matchedItem?.apiUrl;
+          if (!apiUrl) {
+            setThumbnailPool([]);
+            setNextPage(null);
+            return;
+          }
+
+          // 用找到的 apiUrl 撈取實際的影片列表
+          res = await fetch(apiUrl);
+        } else {
+          // 情況 B：網址本來就有帶 key，直接撈取
+          res = await fetch(`${basePath}/playlist-items/${key}/${page}`);
+        }
+
+        // 統一驗證撈取影片列表的 response
         if (!res.ok) {
+          if (replace) {
+            setThumbnailPool([]);
+          }
+          setNextPage(null);
           return;
         }
+        // if (!key) {
+        //   const res = await fetch(`${basePath}/playlist-list/program`);
+        //   const data: ProgramListResponse = await res.json();
+        //   const matchedItem = data?.items.find(
+        //     (item) => item.title === program?.name,
+        //   );
+        //   const apiUrl = matchedItem?.apiUrl;
+        //   if (!apiUrl) return;
+        //   const resNext = await fetch(apiUrl);
+        //   const dataNext: ProgramListResponse = await resNext.json();
+        //   return dataNext;
+        // } else {
+        //   const res = await fetch(`${basePath}/playlist-items/${key}/${page}`);
+        //   if (!res.ok) {
+        //     if (replace) {
+        //       setThumbnailPool([]);
+        //     }
+        //     setNextPage(null);
+        //     return;
+        //   }
+        // }
 
         const data: VideoListResponse = await res.json();
 
-        if (!ignore) {
-          setThumbnailPool(data.items || []);
+        if (activeKeyRef.current !== key) {
+          return;
         }
+
+        const items = data.items || [];
+        const hasMore = data.hasMore ?? items.length > 0;
+        setThumbnailPool((prev) => (replace ? items : [...prev, ...items]));
+        setNextPage(hasMore ? (data.nextPage ?? page + 1) : null);
       } catch {
-        if (!ignore) {
+        if (replace) {
           setThumbnailPool([]);
         }
+        setNextPage(null);
+      } finally {
+        if (activeKeyRef.current === key) {
+          setLoadingMore(false);
+        }
+        fetchingRef.current = false;
       }
+    },
+    [isValid, key],
+  );
+
+  useEffect(() => {
+    // if (!isValid || !key) {
+    //   setThumbnailPool([]);
+    //   setNextPage(null);
+    //   return;
+    // }
+    if (!isValid) {
+      setThumbnailPool([]);
+      setNextPage(null);
+      return;
     }
 
-    fetchThumbnails();
-
-    return () => {
-      ignore = true;
-    };
-  }, [isValid]);
+    fetchPlaylistPage(1, true);
+  }, [fetchPlaylistPage, isValid, key]);
 
   // 無限滾動：底部 sentinel 進入視窗就再載入一批
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el) {
+    if (!el || nextPage === null) {
       return;
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setVisibleCount((count) => count + LOAD_STEP);
+        if (entries[0]?.isIntersecting && !loadingMore) {
+          fetchPlaylistPage(nextPage);
         }
       },
-      { rootMargin: "600px 0px" }
+      { rootMargin: "600px 0px" },
     );
 
     observer.observe(el);
 
     return () => observer.disconnect();
-  }, [isValid, slug]);
+  }, [fetchPlaylistPage, loadingMore, nextPage]);
 
   const episodes = useMemo(() => {
     const currentProgram = program || programs[0];
-    const offset = Math.max(programIndex, 0) * 3;
-    const list: ProgramEpisode[] = [];
-
-    for (let index = 0; index < visibleCount; index += 1) {
-      const seed = episodeSeeds[index % episodeSeeds.length];
-      const video =
-        thumbnailPool.length > 0
-          ? thumbnailPool[(offset + index) % thumbnailPool.length]
-          : undefined;
-      const fallbackId = 6399 + index;
-      const videoId = video?.id || fallbackId;
-
-      list.push({
-        ...seed,
-        id: `${currentProgram.slug}-${videoId}-${index}`,
-        href: `/programs/${currentProgram.slug}/video/${videoId}`,
-        title: video?.title || seed.title,
-        date: video?.publishAt?.split(" ")[0] || seed.date,
+    return thumbnailPool.map(
+      (video, index): ProgramEpisode => ({
+        id: `${currentProgram.key}-${video.id}-${index}`,
+        href: `/programs/${currentProgram.key}/video/${watchUrlToSlug(video.watchUrl) ?? video.id}`,
+        title: video.title,
+        date: video.publishAt?.split(" ")[0] || "",
+        duration: "",
+        views: "",
+        label: "",
         ep: `EP.${Math.max(currentProgram.ep - index, 1)}`,
-        thumbnailUrl: video?.thumbnailUrl,
-      });
-    }
-
-    return list;
-  }, [program, programIndex, thumbnailPool, visibleCount]);
+        thumbnailUrl: video.thumbnailUrl,
+      }),
+    );
+  }, [program, thumbnailPool]);
 
   if (!isValid || !program) {
     return null;
@@ -278,7 +340,7 @@ export default function Page() {
       label: "節目",
     },
     {
-      href: `/programs/${program.slug}`,
+      href: `/programs/${program.key}`,
       label: program.name,
     },
   ];
@@ -289,9 +351,9 @@ export default function Page() {
         <nav className={styles.programTabs} aria-label="節目分類">
           {programs.map((item) => (
             <Link
-              className={item.slug === slug ? styles.tabActive : undefined}
-              href={`/programs/${item.slug}`}
-              key={item.slug}
+              className={item.key === slug ? styles.tabActive : undefined}
+              href={`/programs/${item.key}`}
+              key={item.key}
             >
               {item.name}
             </Link>
@@ -342,13 +404,24 @@ export default function Page() {
             })}
           </section>
 
-          <div
-            ref={sentinelRef}
-            className={styles.sentinel}
-            aria-hidden="true"
-          />
+          {nextPage !== null ? (
+            <div
+              ref={sentinelRef}
+              className={styles.sentinel}
+              aria-hidden="true"
+            />
+          ) : null}
         </div>
       </div>
     </main>
+  );
+}
+
+// useSearchParams 在靜態匯出（output: export）時必須包在 Suspense 邊界內，否則整頁 prerender 失敗
+export default function Page() {
+  return (
+    <Suspense fallback={null}>
+      <CategoryContent />
+    </Suspense>
   );
 }
