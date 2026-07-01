@@ -5,6 +5,12 @@ import type { PointerEvent as ReactPointerEvent, SyntheticEvent } from "react";
 import dynamic from "next/dynamic";
 import styles from "./page.module.scss";
 import type { ShortsApiItem, ShortsApiResponse } from "../_interfaces/shorts";
+import { watchUrlToSlug } from "../_lib/videoDetail";
+
+// 網址與比對統一用 slug（/video/{slug}）；沒有 slug 時退回數字 id
+function itemSlug(item: ShortsApiItem): string {
+  return watchUrlToSlug(item.watchUrl) ?? String(item.id);
+}
 
 // react-player v3：以 src 指定來源（v2 的 url 已停用）
 const ReactPlayer = dynamic(() => import("react-player"), {
@@ -128,11 +134,10 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
   const seekBarRef = useRef<HTMLDivElement | null>(null);
   const seekingRef = useRef(false);
 
-  // 網址帶入的目標影片 id：載入後要跳到這一則；解析完成後設回 null
-  const [targetId, setTargetId] = useState<number | null>(() => {
-    const n = initialId != null ? Number(initialId) : NaN;
-    return Number.isFinite(n) ? n : null;
-  });
+  // 網址帶入的目標影片 slug：載入後要跳到這一則；解析完成後設回 null
+  const [targetSlug, setTargetSlug] = useState<string | null>(
+    () => initialId ?? null,
+  );
 
   const stageRef = useRef<HTMLElement | null>(null);
   const lockRef = useRef(false);
@@ -179,29 +184,29 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
     }
   }, [moreId, loadingMore]);
 
-  // 解析網址帶入的 id：在已載入清單裡找；找不到就往後再抓一批，直到找到或沒有更多
+  // 解析網址帶入的 slug：在已載入清單裡找；找不到就往後再抓一批，直到找到或沒有更多
   useEffect(() => {
-    if (targetId == null) return;
+    if (targetSlug == null) return;
     if (items.length === 0) return; // 等首批回來
 
-    const idx = items.findIndex((s) => s.id === targetId);
+    const idx = items.findIndex((s) => itemSlug(s) === targetSlug);
     if (idx >= 0) {
       setIndex(idx);
-      setTargetId(null);
+      setTargetSlug(null);
       return;
     }
 
     if (hasMore && moreId && !loadingMore) {
       loadMore(); // 還沒載到，繼續往後找
     } else if (!hasMore) {
-      setTargetId(null); // 整份都沒有這個 id，退回從頭播
+      setTargetSlug(null); // 整份都沒有這個 slug，退回從頭播
     }
-  }, [targetId, items, hasMore, moreId, loadingMore, loadMore]);
+  }, [targetSlug, items, hasMore, moreId, loadingMore, loadMore]);
 
   // 目標解析完成（或本來就沒有目標）後關閉載入動畫
   useEffect(() => {
-    if (targetId == null) setLoading(false);
-  }, [targetId]);
+    if (targetSlug == null) setLoading(false);
+  }, [targetSlug]);
 
   // 切換到別則時把進度條歸零
   useEffect(() => {
@@ -239,13 +244,13 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
     seekingRef.current = false;
   };
 
-  // 目前這則的 id 同步到網址（用 replaceState，不重新抓資料、不灌爆上一頁紀錄）
+  // 目前這則的 slug 同步到網址（用 replaceState，不重新抓資料、不灌爆上一頁紀錄）
   useEffect(() => {
-    if (targetId != null) return; // 還在跳轉中先不要動網址
+    if (targetSlug != null) return; // 還在跳轉中先不要動網址
     const cur = items[index];
     if (!cur) return;
-    window.history.replaceState(null, "", `/shorts/${cur.id}`);
-  }, [index, items, targetId]);
+    window.history.replaceState(null, "", `/shorts/${itemSlug(cur)}`);
+  }, [index, items, targetSlug]);
 
   // 接近清單末端時先預抓下一批，讓滑動無縫
   useEffect(() => {
