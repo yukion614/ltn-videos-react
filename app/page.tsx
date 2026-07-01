@@ -167,7 +167,7 @@ export default function Home() {
   }
 
   // 「影音精選」主播放器：取前 limit 隻並補上 hlsUrl（播放器需要）
-  async function fetchFeaturedVideos(apiUrl: string, limit = 7) {
+  async function fetchFeaturedVideos(apiUrl: string, limit = 10) {
     const items = await fetchPlaylistItems(apiUrl);
 
     return Promise.all(
