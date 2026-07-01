@@ -10,6 +10,11 @@ import type {
   VideoListItem,
 } from "@/app/_interfaces/videoArticle";
 import type { BrandVideoResponse } from "@/app/_interfaces/BrandVideo";
+import {
+  getTopicFirstWatchUrl,
+  toProxiedHls,
+  watchUrlToSlug,
+} from "@/app/_lib/videoDetail";
 
 const programLinks = [
   "政面交鋒",
@@ -27,14 +32,18 @@ export default function Navbar() {
   //當網頁在瀏覽器開機（Mounted）後，next-themes 會跑去偵測瀏覽器底層的 window.matchMedia('(prefers-color-scheme: dark)')。
   const { resolvedTheme, setTheme } = useTheme();
   const [latestVideo, setLatestVideo] = useState<VideoListItem[]>([]);
+  // 話題連結：取 topic 清單第一支影片的 watchUrl，接在 /topic 後面
+  const [topicWatchUrl, setTopicWatchUrl] = useState<string | null>(null);
   const pathname = usePathname();
 
   const mainLinks = [
     { name: "最新", link: "latest" },
-    { name: "shorts", link: "shorts" },
+    { name: "Shorts", link: "shorts" },
     {
       name: "話題",
-      link: `topic/video/${latestVideo[0] ? latestVideo[0].id : null}`,
+      link: topicWatchUrl
+        ? `topic/video/${watchUrlToSlug(topicWatchUrl)}`
+        : "topic",
     },
     { name: "節目", link: "programs" },
   ];
@@ -45,6 +54,7 @@ export default function Navbar() {
   useEffect(() => {
     setMounted(true);
     fetchLatestVideo();
+    fetchTopicFirstVideo();
   }, []);
 
   useEffect(() => {
@@ -65,25 +75,30 @@ export default function Navbar() {
 
     const items = await Promise.all(
       data.items.slice(0, limit).map(async (item) => {
-        const detailUrl = `${basePath}/video/${item.id}`;
-        const detailRes = await fetch(detailUrl);
-        const detailData: BrandVideoResponse = await detailRes.json();
+        // 詳情 API 以 watchUrl 內的 slug 為 key，用數字 id 會得到空陣列
+        const slug = watchUrlToSlug(item.watchUrl);
+        const detailData: BrandVideoResponse | null = slug
+          ? await fetch(`${basePath}/video/${slug}`).then((r) => r.json())
+          : null;
+        // 詳情端點偶爾取不到 video（影片已下架／回應為錯誤格式），
+        // 直接取 .hlsUrl 會整個 navbar 崩掉，這裡先安全取值再決定要不要代理
+        const rawHlsUrl = detailData?.video?.hlsUrl ?? "";
 
         return {
           ...item,
           // 上游只對 *.ltn.com.tw 開 CORS：正式環境直接用原始網址；
           // 本機 dev 才換成同源 proxy 路徑（對應 next.config 的 /hls rewrite）
-          hlsUrl:
-            process.env.NODE_ENV === "development"
-              ? detailData.video.hlsUrl.replace(
-                  "https://video.ltn.com.tw/media/",
-                  "/hls/",
-                )
-              : detailData.video.hlsUrl,
+          hlsUrl: toProxiedHls(rawHlsUrl) ?? "",
         };
       }),
     );
     setLatestVideo(items);
+  }
+
+  // 話題連結：取 topic 清單第一支影片的 watchUrl
+  async function fetchTopicFirstVideo() {
+    const watchUrl = await getTopicFirstWatchUrl();
+    if (watchUrl) setTopicWatchUrl(watchUrl);
   }
 
   return (
