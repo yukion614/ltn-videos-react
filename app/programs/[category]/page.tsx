@@ -20,6 +20,7 @@ import VedoThumbnail from "@/app/_components/VideoThumbnail/VideoThumbnail";
 import VideoPlayer from "@/app/_components/VideoPlayer/VideoPlayer";
 import { programMeta, getPrograms } from "@/app/_lib/programMeta";
 import type { ProgramMeta } from "@/app/_lib/programMeta";
+import { useDocumentMeta } from "@/app/_lib/useDocumentMeta";
 import { watchUrlToSlug, toProxiedHls } from "@/app/_lib/videoDetail";
 import type { BrandVideoResponse } from "@/app/_interfaces/BrandVideo";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
@@ -158,6 +159,17 @@ function CategoryContent() {
     };
   }, []);
   const program = programs.find((p) => p.key === slug);
+
+  // 分類頁沒有 per-page SEO API，就用節目名稱組出分頁標題與 OG（名稱回來前不注入）
+  useDocumentMeta(
+    program?.name
+      ? {
+          title: `${program.name} - 自由影音`,
+          description: `${program.name}｜自由影音節目最新影片一覽`,
+          canonicalUrl: slug ? `/programs/${slug}` : undefined,
+        }
+      : null,
+  );
 
   const [thumbnailPool, setThumbnailPool] = useState<VideoListItem[]>([]);
   // 第一則影片的播放網址（列表 API 不含 hlsUrl，需另打詳情補上）

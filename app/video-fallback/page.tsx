@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import VideoDetail from "@/app/_components/VideoDetail/VideoDetail";
 import type { BrandVideoResponse } from "@/app/_interfaces/BrandVideo";
 import type { PlaylistVideoItem } from "@/app/_interfaces/playlist";
-import { getPlaylistPage, getVideo } from "@/app/_lib/videoDetail";
+import {
+  buildVideoDocMeta,
+  getPlaylistPage,
+  getVideo,
+} from "@/app/_lib/videoDetail";
+import { useDocumentMeta } from "@/app/_lib/useDocumentMeta";
 
 // 靜態站的「影片外殼頁」。
 //
@@ -48,6 +53,11 @@ type LoadState =
 export default function VideoFallbackPage() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
 
+  // 資料就緒後把 API 的 SEO / OG 補進 <head>（含分頁標題）；load 中／找不到時不注入
+  useDocumentMeta(
+    state.status === "ready" ? buildVideoDocMeta(state.data) : null,
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -64,10 +74,6 @@ export default function VideoFallbackPage() {
         setState({ status: "notfound" });
         return;
       }
-
-      // 客戶端補上標題（爬蟲拿不到，但一般使用者與分頁標題正確）
-      const title = data.seo?.title || data.video.title;
-      if (title) document.title = title;
 
       const playlistKey = data.playlist?.key ?? "";
       const firstPage = await getPlaylistPage(playlistKey);
