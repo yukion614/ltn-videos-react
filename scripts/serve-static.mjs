@@ -132,7 +132,7 @@ async function serveStatic(req, res) {
     // 回 /programs/_shell 外殼（layout 的 generateStaticParams 有預生成此外殼），
     // 由分類頁從網址讀 key 即時抓後端渲染。只比對「單一層級」的分類頁，
     // /programs/{key}/video/... 已由上面的影片 fallback 處理。
-    if (/^\/programs\/[^/]+\/index\.html$/.test(urlPath)) {
+    if (/^\/programs\/[^/]+(?:\/index\.html)?$/.test(urlPath)) {
       const shell = path.join(OUT_DIR, "programs", "_shell", "index.html");
       if ((await stat(shell).catch(() => null))?.isFile()) {
         res.writeHead(200, { "content-type": MIME[".html"] });
