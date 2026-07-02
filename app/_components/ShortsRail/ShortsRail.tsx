@@ -66,6 +66,8 @@ export default function ShortsRail({ items }: { items: ShortsRailItem[] }) {
                     className={styles.player}
                     src={toProxiedHls(short.hlsUrl)}
                     playing // hover 時自動播放
+                    autoPlay // 帶上原生 autoplay：HLS 串流 ready 就自己播，
+                    // 不倚賴 react-player 只在掛載時呼叫一次、且會被 manifest 載入 race 掉的 .play()
                     muted // 靜音（瀏覽器自動播放的必要條件）
                     loop // 循環播放
                     playsInline
