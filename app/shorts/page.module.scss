@@ -248,7 +248,7 @@ $nav-h: 160px;
 
 .panelTitle {
   margin: 0;
-  font-size: 19px;
+  font-size: 15px; // 與 .panelBody 內文同級數
   font-weight: 800;
   line-height: 1.4;
 }
@@ -284,10 +284,14 @@ $nav-h: 160px;
   font-size: 15px;
   line-height: 1.85;
   color: var(--color-text);
+  // 長網址（無空格的連續字串）要能斷行，避免撐爆面板往右溢出
+  overflow-wrap: anywhere;
+  word-break: break-word;
 
   a {
     color: #2563eb;
     text-decoration: none;
+    overflow-wrap: anywhere;
 
     &:hover {
       text-decoration: underline;
@@ -533,6 +537,7 @@ $nav-h: 160px;
     z-index: 10; // 展開時面板最高，蓋過浮動分享列(8)
     width: 100% !important;
     height: auto;
+    max-height: 75vh; // 展開高度最多佔螢幕 3/4，超過的內容由 panelInner 捲動
     bottom: 0;
     border-radius: 14px 14px 0 0;
     background: rgba(0, 0, 0, 0.92); // 加深、近不透明，圓角弧度才看得清楚
@@ -542,7 +547,7 @@ $nav-h: 160px;
     transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
 
     .panelTitle {
-      font-size: var(--font-size-small);
+      font-size: 15px; // 手機面板標題也與內文同級數
     }
   }
 
@@ -554,6 +559,7 @@ $nav-h: 160px;
 
   .panelInner {
     width: 100%;
+    max-height: 75vh; // 綁定高度上限，內容過長時本層 overflow-y:auto 出現滾輪
     // 底部加大留白（含手機安全區），內容不貼底、上方倒角才露得出來
     padding: 24px 24px calc(28px + env(safe-area-inset-bottom));
   }
