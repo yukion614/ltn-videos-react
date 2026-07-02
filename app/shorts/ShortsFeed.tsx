@@ -134,9 +134,21 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
   const seekBarRef = useRef<HTMLDivElement | null>(null);
   const seekingRef = useRef(false);
 
+  // 完全 SPA：/shorts/ 這頁會被伺服器拿來服務 /shorts/{id}（見 serve-static.mjs、
+  // nginx.conf 的 fallback）。此時沒有 props initialId，改從網址 /shorts/{slug} 解析目標。
+  // 只在掛載時取一次（之後捲動會用 replaceState 改寫網址，不能每次 render 重算，
+  // 否則會誤觸下方「首批載入」effect 重抓資料）。
+  const [startId] = useState<string | undefined>(
+    () =>
+      initialId ??
+      (typeof window !== "undefined"
+        ? window.location.pathname.match(/\/shorts\/([^/]+)/)?.[1]
+        : undefined),
+  );
+
   // 網址帶入的目標影片 slug：載入後要跳到這一則；解析完成後設回 null
   const [targetSlug, setTargetSlug] = useState<string | null>(
-    () => initialId ?? null,
+    () => startId ?? null,
   );
 
   const stageRef = useRef<HTMLElement | null>(null);
@@ -167,9 +179,9 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
       })
       .finally(() => {
         // 沒有要跳轉的目標就直接顯示；有目標時等解析到該則再關閉載入動畫
-        if (initialId == null) setLoading(false);
+        if (startId == null) setLoading(false);
       });
-  }, [initialId]);
+  }, [startId]);
 
   const loadMore = useCallback(async () => {
     if (!moreId || loadingMore) return;

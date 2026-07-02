@@ -23,6 +23,16 @@ export default function config(phase: string): NextConfig {
             source: "/hls/:path*",
             destination: "https://video.ltn.com.tw/media/:path*",
           },
+          // 影片詳情頁 / 短影音單則頁不預先產生（沒有對應路由）。
+          // 正式站（export）靠 serve-static.mjs / nginx 把這些網址回外殼頁；
+          // dev 沒有那層，改用 rewrite 把它們導到對應外殼（瀏覽器網址不變，
+          // 外殼會讀網址上的 id 用 JS 抓 API 渲染）。
+          {
+            source: "/programs/:category/video/:id",
+            destination: "/video-fallback",
+          },
+          { source: "/topic/video/:id", destination: "/video-fallback" },
+          { source: "/shorts/:id", destination: "/shorts" },
         ];
       },
     };

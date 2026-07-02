@@ -117,6 +117,30 @@ async function serveStatic(req, res) {
       }
     }
 
+    // shorts 單則 SPA fallback：/shorts/{id} 沒有預生成檔案時回 /shorts/ 外殼，
+    // 由 ShortsFeed 讀網址 id 跳到該則。對應 deploy/nginx.conf 的同名 location。
+    if (/^\/shorts\/[^/]+\//.test(urlPath)) {
+      const shell = path.join(OUT_DIR, "shorts", "index.html");
+      if ((await stat(shell).catch(() => null))?.isFile()) {
+        res.writeHead(200, { "content-type": MIME[".html"] });
+        createReadStream(shell).pipe(res);
+        return;
+      }
+    }
+
+    // 節目分類頁 SPA fallback：build 後才新增的節目 /programs/{新key} 沒有檔案時，
+    // 回 /programs/_shell 外殼（layout 的 generateStaticParams 有預生成此外殼），
+    // 由分類頁從網址讀 key 即時抓後端渲染。只比對「單一層級」的分類頁，
+    // /programs/{key}/video/... 已由上面的影片 fallback 處理。
+    if (/^\/programs\/[^/]+\/index\.html$/.test(urlPath)) {
+      const shell = path.join(OUT_DIR, "programs", "_shell", "index.html");
+      if ((await stat(shell).catch(() => null))?.isFile()) {
+        res.writeHead(200, { "content-type": MIME[".html"] });
+        createReadStream(shell).pipe(res);
+        return;
+      }
+    }
+
     // 其餘找不到的頁面：回 404.html（next export 會產生）或純文字
     const notFound = path.join(OUT_DIR, "404.html");
     if ((await stat(notFound).catch(() => null))?.isFile()) {

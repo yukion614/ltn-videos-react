@@ -39,10 +39,12 @@ export async function getTopicFirstWatchUrl(): Promise<string | null> {
  * 不在 /list（最新影片）裡。若 generateStaticParams 只用 getVideoIds()，
  * 這些頁面不會被產生，靜態站上一點就 404。
  *
- * 逐一走訪 topic 各清單並分頁抓完，收集所有 watchUrl 的 slug（去重）。
+ * 逐一走訪 topic 各清單收集 watchUrl 的 slug（去重）。
+ * maxPages 限制每份清單最多抓幾頁（方案 B 傳 1＝只取最新一頁）；
+ * 預設 Infinity＝分頁抓完整份清單（另有 50 頁安全上限防無限迴圈）。
  * 失敗時盡量回傳已取得的部分，不讓單一清單失敗拖垮整個 build。
  */
-export async function getTopicVideoIds(): Promise<string[]> {
+export async function getTopicVideoIds(maxPages = Infinity): Promise<string[]> {
   const slugs = new Set<string>();
   try {
     const listRes = await fetch(`${basePath}/playlist-list/topic`);
@@ -55,8 +57,8 @@ export async function getTopicVideoIds(): Promise<string[]> {
       if (!key) continue;
 
       let page: number | null = 1;
-      // 安全上限：避免分頁資料異常造成無限迴圈
-      for (let guard = 0; page != null && guard < 50; guard++) {
+      // guard：50 頁安全上限防無限迴圈；maxPages：方案 B 只抓最新幾頁
+      for (let guard = 0; page != null && guard < 50 && guard < maxPages; guard++) {
         const { items, nextPage }: PlaylistPage = await getPlaylistPage(
           key,
           page,
@@ -76,6 +78,10 @@ export async function getTopicVideoIds(): Promise<string[]> {
 
 /**
  * 靜態匯出用：列出「節目」區塊所有影片的 slug。
+ *
+ * ※ 目前（方案 B）未接線：programs 詳情頁改成只預先產生 /list 最新影片，
+ *   節目清單較舊的影片交給 /video-fallback 即時渲染。保留此函式以便日後
+ *   要切回「完整 per-video SEO」時，直接在 generateStaticParams 併回即可。
  *
  * 節目影片頁連到 /programs/{category}/video/{slug}，這些 slug 來自
  * /playlist-list/program 底下各節目清單（playlist-items/{key}/{page}），

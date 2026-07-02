@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   Suspense,
   useCallback,
@@ -15,22 +15,16 @@ import type {
   VideoListItem,
   VideoListResponse,
 } from "@/app/_interfaces/videoArticle";
-import type {
-  ProgramListResponse,
-  PlaylistEntry,
-} from "@/app/_interfaces/playlist";
 import styles from "./page.module.scss";
 import VedoThumbnail from "@/app/_components/VideoThumbnail/VideoThumbnail";
 import VideoPlayer from "@/app/_components/VideoPlayer/VideoPlayer";
-import { programMeta, programKeys } from "@/app/_lib/programMeta";
+import { programMeta, getPrograms } from "@/app/_lib/programMeta";
+import type { ProgramMeta } from "@/app/_lib/programMeta";
 import { watchUrlToSlug, toProxiedHls } from "@/app/_lib/videoDetail";
 import type { BrandVideoResponse } from "@/app/_interfaces/BrandVideo";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
 
 const basePath = "https://video.ltn.com.tw/brand/api";
-
-const programs = programMeta;
-const validKeys = programKeys;
 
 const episodeSeeds = [
   {
@@ -120,14 +114,6 @@ const episodeSeeds = [
   },
 ];
 
-function getSlug(category: string | string[] | undefined) {
-  if (Array.isArray(category)) {
-    return category[0] || "";
-  }
-
-  return category || "";
-}
-
 type ProgramEpisode = {
   id: string;
   href: string;
@@ -153,12 +139,26 @@ function slotRole(index: number): "big" | "medium" | "normal" {
 }
 
 function CategoryContent() {
-  const params = useParams();
-  const router = useRouter();
-  const slug = getSlug(params.category);
-  const programIndex = programs.findIndex((program) => program.key === slug);
-  const program = programIndex >= 0 ? programs[programIndex] : undefined;
-  const isValid = validKeys.includes(slug);
+  const pathname = usePathname();
+  // 網址 /programs/{key} 的第 2 段就是後端節目 key（路由參數 = 後端 key）。
+  // 用 usePathname 而非 useParams：外殼頁被伺服器服務於其他 key 時，
+  // useParams 會拿到烤死的參數，usePathname 才反映真正的網址。
+  const slug = pathname?.split("/").filter(Boolean)[1] ?? "";
+
+  // 節目清單（tabs／標題／集數）改吃後端；初值用後備清單避免閃爍、
+  // 後端回來後再覆蓋（新節目就會出現在 tabs 且能正確顯示標題）。
+  const [programs, setPrograms] = useState<ProgramMeta[]>(programMeta);
+  useEffect(() => {
+    let ignore = false;
+    getPrograms().then((list) => {
+      if (!ignore && list.length) setPrograms(list);
+    });
+    return () => {
+      ignore = true;
+    };
+  }, []);
+  const program = programs.find((p) => p.key === slug);
+
   const [thumbnailPool, setThumbnailPool] = useState<VideoListItem[]>([]);
   // 第一則影片的播放網址（列表 API 不含 hlsUrl，需另打詳情補上）
   const [leadHls, setLeadHls] = useState<string>("");
@@ -178,63 +178,29 @@ function CategoryContent() {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const fetchingRef = useRef(false);
   const activeKeyRef = useRef<string | null>(null);
-  const searchParams = useSearchParams();
-  const key = searchParams.get("key");
-
-  useEffect(() => {
-    if (!isValid) {
-      router.replace("/programs");
-    }
-  }, [isValid, router]);
 
   // 切換節目時重置無限滾動的數量
   useEffect(() => {
-    activeKeyRef.current = key;
+    activeKeyRef.current = slug;
     fetchingRef.current = false;
     setThumbnailPool([]);
-    setNextPage(key ? 1 : null);
-  }, [slug, key]);
+    setNextPage(slug ? 1 : null);
+  }, [slug]);
 
   const fetchPlaylistPage = useCallback(
     async (page: number, replace = false) => {
-      //if (!isValid || !key || fetchingRef.current) {
-      if (!isValid || fetchingRef.current) {
+      if (!slug || fetchingRef.current) {
         return;
       }
 
       fetchingRef.current = true;
-      activeKeyRef.current = key;
+      activeKeyRef.current = slug;
       setLoadingMore(true);
 
       try {
-        let res: Response;
-        console.log("dont have key :", key);
-        // 情況 A：網址沒有帶 key，先用 program 名字去抓對應的 apiUrl
-        if (!key) {
-          console.log("dont have key :");
-          const listRes = await fetch(`${basePath}/playlist-list/program`);
-          if (!listRes.ok) throw new Error("撈取節目清單失敗");
+        // slug 就是後端 playlist key，直接抓該清單的分頁（不再靠節目名稱對照）
+        const res = await fetch(`${basePath}/playlist-items/${slug}/${page}`);
 
-          const listData = await listRes.json();
-          const matchedItem = listData?.items?.find(
-            (item: any) => item.title === program?.name,
-          );
-
-          const apiUrl = matchedItem?.apiUrl;
-          if (!apiUrl) {
-            setThumbnailPool([]);
-            setNextPage(null);
-            return;
-          }
-
-          // 用找到的 apiUrl 撈取實際的影片列表
-          res = await fetch(apiUrl);
-        } else {
-          // 情況 B：網址本來就有帶 key，直接撈取
-          res = await fetch(`${basePath}/playlist-items/${key}/${page}`);
-        }
-
-        // 統一驗證撈取影片列表的 response
         if (!res.ok) {
           if (replace) {
             setThumbnailPool([]);
@@ -242,31 +208,11 @@ function CategoryContent() {
           setNextPage(null);
           return;
         }
-        // if (!key) {
-        //   const res = await fetch(`${basePath}/playlist-list/program`);
-        //   const data: ProgramListResponse = await res.json();
-        //   const matchedItem = data?.items.find(
-        //     (item) => item.title === program?.name,
-        //   );
-        //   const apiUrl = matchedItem?.apiUrl;
-        //   if (!apiUrl) return;
-        //   const resNext = await fetch(apiUrl);
-        //   const dataNext: ProgramListResponse = await resNext.json();
-        //   return dataNext;
-        // } else {
-        //   const res = await fetch(`${basePath}/playlist-items/${key}/${page}`);
-        //   if (!res.ok) {
-        //     if (replace) {
-        //       setThumbnailPool([]);
-        //     }
-        //     setNextPage(null);
-        //     return;
-        //   }
-        // }
 
         const data: VideoListResponse = await res.json();
 
-        if (activeKeyRef.current !== key) {
+        // 抓的過程中若已切換到別的節目，丟棄這批結果
+        if (activeKeyRef.current !== slug) {
           return;
         }
 
@@ -280,29 +226,24 @@ function CategoryContent() {
         }
         setNextPage(null);
       } finally {
-        if (activeKeyRef.current === key) {
+        if (activeKeyRef.current === slug) {
           setLoadingMore(false);
         }
         fetchingRef.current = false;
       }
     },
-    [isValid, key],
+    [slug],
   );
 
   useEffect(() => {
-    // if (!isValid || !key) {
-    //   setThumbnailPool([]);
-    //   setNextPage(null);
-    //   return;
-    // }
-    if (!isValid) {
+    if (!slug) {
       setThumbnailPool([]);
       setNextPage(null);
       return;
     }
 
     fetchPlaylistPage(1, true);
-  }, [fetchPlaylistPage, isValid, key]);
+  }, [fetchPlaylistPage, slug]);
 
   // 無限滾動：底部 sentinel 進入視窗就再載入一批
   useEffect(() => {
@@ -402,26 +343,29 @@ function CategoryContent() {
   }, [isMobile, leadHls]);
 
   const episodes = useMemo(() => {
-    const currentProgram = program || programs[0];
+    const epBase = program?.ep ?? 0;
     return thumbnailPool.map(
       (video, index): ProgramEpisode => ({
-        id: `${currentProgram.key}-${video.id}-${index}`,
-        href: `/programs/${currentProgram.key}/video/${watchUrlToSlug(video.watchUrl) ?? video.id}`,
+        id: `${slug}-${video.id}-${index}`,
+        href: `/programs/${slug}/video/${watchUrlToSlug(video.watchUrl) ?? video.id}`,
         title: video.title,
         date: video.publishAt?.split(" ")[0] || "",
         duration: "",
         views: "",
         label: "",
-        ep: `EP.${Math.max(currentProgram.ep - index, 1)}`,
+        ep: `EP.${Math.max(epBase - index, 1)}`,
         thumbnailUrl: video.thumbnailUrl,
       }),
     );
-  }, [program, thumbnailPool]);
+  }, [program, slug, thumbnailPool]);
 
-  if (!isValid || !program) {
+  // 不再因為「不在寫死清單」而導回 /programs；未知 key 也照網址抓後端。
+  // slug 為空（外殼在 prerender 階段 window 尚未就緒）時先不渲染。
+  if (!slug) {
     return null;
   }
 
+  const programName = program?.name ?? "";
   const crumbs = [
     {
       href: "/",
@@ -432,8 +376,8 @@ function CategoryContent() {
       label: "節目",
     },
     {
-      href: `/programs/${program.key}`,
-      label: program.name,
+      href: `/programs/${slug}`,
+      label: programName,
     },
   ];
 
@@ -458,7 +402,7 @@ function CategoryContent() {
           <Crumb crumbs={crumbs} />
         </div>
 
-        <h1 className={styles.programName}>{program.name}</h1>
+        <h1 className={styles.programName}>{programName}</h1>
 
         <div className={styles.content}>
           <section className={styles.feed} aria-label="節目影片列表">
