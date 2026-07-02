@@ -253,8 +253,18 @@ export interface Crumb {
  *   其 url 形如 /programs/{playlist key}，與本站 /programs/[category] 路由一致，直接沿用。
  * 不包含目前影片標題。
  */
-export function buildVideoCrumbs(data: BrandVideoResponse | null): Crumb[] {
+export function buildVideoCrumbs(
+  data: BrandVideoResponse | null,
+  opts?: { isTopic?: boolean },
+): Crumb[] {
   const crumbs: Crumb[] = [{ href: "/", label: "首頁" }];
+
+  // topic 影片頁：麵包屑只顯示到「話題」，
+  // 不帶出 API breadcrumb 的話題名稱（如「2026九合一選舉」）。
+  if (opts?.isTopic) {
+    crumbs.push({ href: "/topic", label: "話題" });
+    return crumbs;
+  }
 
   for (const item of data?.breadcrumb ?? []) {
     crumbs.push({ href: item.url, label: item.title });

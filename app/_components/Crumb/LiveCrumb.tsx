@@ -18,9 +18,11 @@ import {
 export default function LiveCrumb({
   slug,
   initial,
+  isTopic,
 }: {
   slug?: string;
   initial: CrumbType[];
+  isTopic?: boolean;
 }) {
   const [crumbs, setCrumbs] = useState<CrumbType[]>(initial);
 
@@ -31,13 +33,13 @@ export default function LiveCrumb({
     (async () => {
       const data = await getVideo(slug);
       if (cancelled || !data?.video) return;
-      setCrumbs(buildVideoCrumbs(data));
+      setCrumbs(buildVideoCrumbs(data, { isTopic }));
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, isTopic]);
 
   return <Crumb crumbs={crumbs} />;
 }
