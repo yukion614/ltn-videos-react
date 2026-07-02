@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { DocMeta } from "@/app/_lib/useDocumentMeta";
 import type { BrandVideoResponse } from "@/app/_interfaces/BrandVideo";
 import type {
   ProgramListResponse,
@@ -292,5 +293,23 @@ export function buildVideoMetadata(data: BrandVideoResponse | null): Metadata {
       description,
       images: imageUrl ? [imageUrl] : undefined,
     },
+  };
+}
+
+/**
+ * 依影片資料組出 client 端要注入 <head> 的扁平 meta（給 useDocumentMeta 用）。
+ * 與 buildVideoMetadata 共用同一套取值 / 後備邏輯，只是攤平成 DocMeta 形狀，
+ * 供靜態外殼頁（video-fallback）在瀏覽器補上 SEO / OG 標籤。
+ */
+export function buildVideoDocMeta(data: BrandVideoResponse | null): DocMeta {
+  const seo = data?.seo;
+  const video = data?.video ?? fallbackVideo;
+
+  return {
+    title: seo?.title || video.title || "影片詳細頁 | 自由影音",
+    description: seo?.description || video.summary || "自由影音影片詳細頁",
+    imageUrl: seo?.imageUrl || video.posterUrl,
+    canonicalUrl: seo?.canonicalUrl || video.canonicalUrl,
+    ogType: "video.other",
   };
 }
