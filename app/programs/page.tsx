@@ -10,7 +10,6 @@ import type {
   ProgramListResponse,
 } from "../_interfaces/playlist";
 import styles from "./page.module.scss";
-import { programMeta } from "../_lib/programMeta";
 import { watchUrlToSlug } from "../_lib/videoDetail";
 
 const basePath = "https://video.ltn.com.tw/brand/api";
@@ -32,9 +31,10 @@ interface ProgramSection extends PlaylistEntry {
   videos: PlaylistVideoItem[];
 }
 
-// 依 API 回傳的節目標題到 programMeta 找對應 key（路由參數）；找不到回空字串
-function toProgramSlug(title: string) {
-  return programMeta.find((program) => program.name === title)?.key ?? "";
+// 後端 entry 自帶 key（就是 /programs/[category] 的路由參數），直接用；
+// 沒有 key 時退回數字 id，再沒有就回空字串
+function toProgramSlug(entry: PlaylistEntry) {
+  return entry.key || (entry.id != null ? String(entry.id) : "");
 }
 
 // 節目分類頁連結；沒有對應 slug 時退回節目首頁
@@ -103,7 +103,7 @@ export default function ProgramsPage() {
 
             return {
               ...entry,
-              slug: toProgramSlug(entry.title),
+              slug: toProgramSlug(entry),
               videos: (itemsData.items ?? []).slice(0, 4),
             };
           }),

@@ -1,6 +1,8 @@
 "use client";
+import { useEffect, useState } from "react";
 import styles from "./FooterMenu.module.scss";
-import { programMeta } from "@/app/_lib/programMeta";
+import { programMeta, getPrograms } from "@/app/_lib/programMeta";
+import type { ProgramMeta } from "@/app/_lib/programMeta";
 import { usePathname } from "next/navigation";
 
 // footer 上方的黑色區塊：自由影音標題 + 一排節目連結
@@ -16,7 +18,18 @@ import { usePathname } from "next/navigation";
 // ];
 
 export default function FooterMenu() {
-  const programs = programMeta;
+  // 節目清單改吃後端；初值用後備清單避免閃爍，後端回來再覆蓋（新節目就會出現）
+  const [programs, setPrograms] = useState<ProgramMeta[]>(programMeta);
+  useEffect(() => {
+    let ignore = false;
+    getPrograms().then((list) => {
+      if (!ignore && list.length) setPrograms(list);
+    });
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
   const pathname = usePathname();
   if (pathname.startsWith("/shorts")) return null;
   return (

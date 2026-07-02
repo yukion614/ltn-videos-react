@@ -16,7 +16,6 @@ import type {
   CongressLiveResponse,
   CongressLiveItem,
 } from "./_interfaces/playlist";
-import { programMeta } from "./_lib/programMeta";
 import { toProxiedHls, watchUrlToSlug } from "./_lib/videoDetail";
 
 // 節目卡片：清單資訊 + 首支影片的封面與連結
@@ -25,22 +24,10 @@ type ProgramCard = PlaylistEntry & {
   watchUrl?: string;
 };
 
-// 依節目標題到 programMeta 找出 name === title 的那筆，取其 slug 組出 /programs/[slug] 連結；
-// 找不到時退回 /programs
-function toProgramHref(key: string | undefined, title: string) {
-  const slug = programMeta.find((program) => program.name === title)?.key;
-  // return slug ? `/programs/${slug}` : "/programs";
-  if (!slug) return "/programs";
-
-  const params = new URLSearchParams();
-
-  if (key) {
-    params.set("key", key);
-  }
-
-  return params.toString()
-    ? `/programs/${slug}?${params.toString()}`
-    : `/programs/${slug}`;
+// 節目卡連結：後端 entry 自帶 key，就是 /programs/[category] 的路由參數，直接用；
+// 沒有 key 時退回 /programs
+function toProgramHref(key: string | undefined) {
+  return key ? `/programs/${key}` : "/programs";
 }
 
 function SectionHeader({
@@ -416,7 +403,7 @@ export default function Home() {
                 title={program.title}
                 meta={`${program.count} 部影片`}
                 src={program.thumbnailUrl}
-                slug={toProgramHref(program.key, program.title)}
+                slug={toProgramHref(program.key)}
                 alt={program.title}
               />
             ))}
