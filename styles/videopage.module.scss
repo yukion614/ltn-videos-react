@@ -130,6 +130,54 @@
   }
 }
 
+// 內文展開／收合（收合僅在手機斷點生效，桌機一律完整顯示、不出現按鈕）
+.expandable {
+  position: relative;
+}
+
+.moreToggle {
+  display: none; // 桌機隱藏；手機且內容過長時才由元件邏輯 render 並顯示
+}
+
+@media (max-width: 640px) {
+  .contentCollapsed {
+    max-height: 168px; // 約 6~7 行，超過即收合
+    overflow: hidden;
+    // 底部漸層淡出，暗示還有內容
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      #000 60%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+  }
+
+  .moreToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 12px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--red);
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+
+    svg {
+      width: 18px;
+      height: 18px;
+      transition: transform 0.2s ease;
+    }
+  }
+
+  .moreIconUp {
+    transform: rotate(180deg);
+  }
+}
+
 .pageNav {
   display: grid;
   gap: 10px;

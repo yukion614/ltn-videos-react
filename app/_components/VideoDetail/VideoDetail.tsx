@@ -1,6 +1,7 @@
 import VideoPlayer from "@/app/_components/VideoPlayer/VideoPlayer";
 import styles from "@/styles/videopage.module.scss";
 import LiveCrumb from "@/app/_components/Crumb/LiveCrumb";
+import ExpandableContent from "@/app/_components/VideoDetail/ExpandableContent";
 import RelatedVideos from "@/app/_components/RelatedVideos/RelatedVideos";
 import type { BrandVideoResponse } from "@/app/_interfaces/BrandVideo";
 import type { PlaylistVideoItem } from "@/app/_interfaces/playlist";
@@ -128,11 +129,8 @@ export default function VideoDetail({
               </a>
             ) : null}
 
-            <div
-              className={styles.articleContent}
-              dangerouslySetInnerHTML={{
-                __html: video.descriptionHtml || `<p>${video.description}</p>`,
-              }}
+            <ExpandableContent
+              html={video.descriptionHtml || `<p>${video.description}</p>`}
             />
           </article>
 
