@@ -125,7 +125,7 @@ export default function VideoDetail({
 
             {video.newsUrl ? (
               <a className={styles.newsLink} href={video.newsUrl}>
-                新聞超連結：前往原始影片頁
+                新聞超連結：前往新聞文章頁
               </a>
             ) : null}
 
