@@ -65,6 +65,19 @@ function buildShareUrls(url: string) {
 
 type ShareUrls = ReturnType<typeof buildShareUrls>;
 
+// 優先用後端預組的分享連結（帶 UTM，行銷可追成效）；舊資料沒有 share 時
+// 才退回用 watchUrl 自行拼。後端欄位名為 twitter，前端沿用 x。
+function resolveShareUrls(item: ShortsApiItem): ShareUrls {
+  if (item.share) {
+    return {
+      line: item.share.line,
+      facebook: item.share.facebook,
+      x: item.share.twitter,
+    };
+  }
+  return buildShareUrls(item.watchUrl);
+}
+
 // 三顆分享鍵：桌機放在面板內，手機浮在影片右側（樣式靠外層 btnClass 切換）
 function ShareLinks({ urls, btnClass }: { urls: ShareUrls; btnClass: string }) {
   return (
@@ -361,7 +374,7 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
             const isActive = i === index;
             // 只渲染目前及相鄰兩則的細節，其餘僅佔位避免一次掛太多
             const isNear = Math.abs(i - index) <= 1;
-            const shareUrls = buildShareUrls(short.watchUrl);
+            const shareUrls = resolveShareUrls(short);
 
             return (
               <section className={styles.slide} key={short.id}>
