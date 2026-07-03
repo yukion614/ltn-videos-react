@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import Crumb from "@/app/_components/Crumb/Crumb";
+import NotFoundPanel from "@/app/_components/NotFoundPanel/NotFoundPanel";
 import type {
   VideoListItem,
   VideoListResponse,
@@ -39,6 +40,8 @@ type ProgramEpisode = {
   thumbnailUrl?: string;
 };
 
+type PlaylistLoadState = "idle" | "loading" | "ready" | "empty" | "error";
+
 /**
  * 版型輪迴規則（4 欄網格）：
  * - index 0：大圖（跨 3 欄 × 2 列）→ 旁邊 2 張縮圖 + 下方兩列各 4 張＝整段 11 個
@@ -61,20 +64,36 @@ function CategoryContent() {
   // 節目清單（tabs／標題／集數）改吃後端；初值用後備清單避免閃爍、
   // 後端回來後再覆蓋（新節目就會出現在 tabs 且能正確顯示標題）。
   const [programs, setPrograms] = useState<ProgramMeta[]>(programMeta);
+  const [programsLoaded, setProgramsLoaded] = useState(programMeta.length > 0);
   useEffect(() => {
     let ignore = false;
     getPrograms().then((list) => {
-      if (!ignore && list.length) setPrograms(list);
+      if (!ignore) {
+        if (list.length) setPrograms(list);
+        setProgramsLoaded(true);
+      }
+    }).catch(() => {
+      if (!ignore) setProgramsLoaded(true);
     });
     return () => {
       ignore = true;
     };
   }, []);
   const program = programs.find((p) => p.key === slug);
+  const [playlistState, setPlaylistState] =
+    useState<PlaylistLoadState>("idle");
+  const isMissingProgram =
+    programsLoaded && !program && playlistState === "empty";
 
   // 分類頁沒有 per-page SEO API，就用節目名稱組出分頁標題與 OG（名稱回來前不注入）
   useDocumentMeta(
-    program?.name
+    isMissingProgram
+      ? {
+          title: "找不到此節目 - 自由影音",
+          description: "這個節目可能不存在、已下架，或網址輸入有誤。",
+          canonicalUrl: slug ? `/programs/${slug}` : undefined,
+        }
+      : program?.name
       ? {
           title: `${program.name} - 自由影音`,
           description: `${program.name}｜自由影音節目最新影片一覽`,
@@ -109,6 +128,7 @@ function CategoryContent() {
     fetchingRef.current = false;
     setThumbnailPool([]);
     setNextPage(slug ? 1 : null);
+    setPlaylistState(slug ? "loading" : "idle");
   }, [slug]);
 
   const fetchPlaylistPage = useCallback(
@@ -120,14 +140,21 @@ function CategoryContent() {
       fetchingRef.current = true;
       activeKeyRef.current = slug;
       setLoadingMore(true);
+      if (replace) {
+        setPlaylistState("loading");
+      }
 
       try {
         // slug 就是後端 playlist key，直接抓該清單的分頁（不再靠節目名稱對照）
         const res = await fetch(`${basePath}/playlist-items/${slug}/${page}`);
 
         if (!res.ok) {
+          if (activeKeyRef.current !== slug) {
+            return;
+          }
           if (replace) {
             setThumbnailPool([]);
+            setPlaylistState("empty");
           }
           setNextPage(null);
           return;
@@ -144,9 +171,16 @@ function CategoryContent() {
         const hasMore = data.hasMore ?? items.length > 0;
         setThumbnailPool((prev) => (replace ? items : [...prev, ...items]));
         setNextPage(hasMore ? (data.nextPage ?? page + 1) : null);
+        if (replace) {
+          setPlaylistState(items.length > 0 ? "ready" : "empty");
+        }
       } catch {
+        if (activeKeyRef.current !== slug) {
+          return;
+        }
         if (replace) {
           setThumbnailPool([]);
+          setPlaylistState("error");
         }
         setNextPage(null);
       } finally {
@@ -304,6 +338,46 @@ function CategoryContent() {
       label: programName,
     },
   ];
+
+  const missingCrumbs = [
+    {
+      href: "/",
+      label: "首頁",
+    },
+    {
+      href: "/programs",
+      label: "節目",
+    },
+    {
+      label: "找不到此節目",
+    },
+  ];
+
+  if (isMissingProgram) {
+    return (
+      <main className={styles.page}>
+        <div className={styles.tabsWrap}>
+          <nav className={styles.programTabs} aria-label="節目分類">
+            {programs.map((item) => (
+              <Link href={`/programs/${item.key}`} key={item.key}>
+                {item.name}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        <div className={styles.wrap}>
+          <div className={styles.crumbWrap}>
+            <Crumb crumbs={missingCrumbs} />
+          </div>
+
+          <NotFoundPanel
+            className={styles.programNotFound}
+          />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className={styles.page}>
