@@ -251,7 +251,7 @@ export interface Crumb {
  * - 開頭固定補上「首頁」(/)
  * - 中間為 API 的 breadcrumb 欄位（如「主要 → 影音精選」）
  *   其 url 形如 /programs/{playlist key}，與本站 /programs/[category] 路由一致，直接沿用。
- * 不包含目前影片標題。
+ * 不包含目前影片標題；最後一層若是目前頁面/分類，會省略 href 讓它不可點擊。
  */
 export function buildVideoCrumbs(
   data: BrandVideoResponse | null,
@@ -259,10 +259,19 @@ export function buildVideoCrumbs(
 ): Crumb[] {
   const crumbs: Crumb[] = [{ href: "/", label: "首頁" }];
 
-  // topic 影片頁：麵包屑只顯示到「話題」，
-  // 不帶出 API breadcrumb 的話題名稱（如「2026九合一選舉」）。
+  // topic 影片頁：保留「話題」入口，並顯示 API breadcrumb 的最後一層，
+  // 但最後一層不帶 href，作為目前所在分類顯示。
   if (opts?.isTopic) {
     crumbs.push({ href: "/topic", label: "話題" });
+
+    const breadcrumb = data?.breadcrumb ?? [];
+    const lastCrumb = breadcrumb[breadcrumb.length - 1];
+    const topicLabel = lastCrumb?.title || data?.playlist?.title;
+
+    if (topicLabel && topicLabel !== "話題") {
+      crumbs.push({ label: topicLabel });
+    }
+
     return crumbs;
   }
 
