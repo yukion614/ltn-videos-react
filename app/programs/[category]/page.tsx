@@ -444,6 +444,7 @@ function CategoryContent() {
                             src={leadHls}
                             poster=""
                             title={item.title}
+                            titleHref={item.href}
                             titlePosition="top"
                             allowFullscreen
                           />

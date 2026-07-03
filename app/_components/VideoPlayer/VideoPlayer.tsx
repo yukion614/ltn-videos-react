@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import styles from "./VideoPlayer.module.scss";
@@ -13,6 +14,8 @@ interface VideoPlayerProps {
   src?: string;
   poster?: string; //影片還沒播放前顯示的封面圖
   title?: string;
+  // 標題連結：有值時，上方標題可點擊進入該影片詳情頁（僅 titlePosition="top" 生效）
+  titleHref?: string;
   width?: number | string;
   height?: number | string;
   allowFullscreen?: boolean; // 是否顯示全螢幕鍵（首頁、短影音不需要）
@@ -40,6 +43,7 @@ export default function VideoPlayer({
   src,
   poster,
   title,
+  titleHref,
   width = "100%",
   height = "auto",
   allowFullscreen = false,
@@ -322,7 +326,17 @@ export default function VideoPlayer({
       {title && titlePosition === "top" ? (
         <>
           <span className={styles.gradientTop} aria-hidden="true" />
-          <span className={styles.mediaTitleTop}>{title}</span>
+          {titleHref ? (
+            // 標題本身就是連結：整塊定位於頂端，點選進入該影片詳情頁
+            <Link
+              href={titleHref}
+              className={`${styles.mediaTitleTop} ${styles.mediaTitleLink}`}
+            >
+              {title}
+            </Link>
+          ) : (
+            <span className={styles.mediaTitleTop}>{title}</span>
+          )}
         </>
       ) : null}
 

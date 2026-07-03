@@ -22,7 +22,9 @@
   color: #fff;
   cursor: pointer;
   opacity: 0.85;
-  transition: opacity 0.2s, background 0.2s;
+  transition:
+    opacity 0.2s,
+    background 0.2s;
 
   &:hover {
     background: rgba(0, 0, 0, 0.75);
@@ -181,4 +183,15 @@
   line-height: 1.42;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+// 可點擊的標題：整塊疊在影片頂端，點選後進入該影片詳情頁
+.mediaTitleLink {
+  cursor: pointer;
+  color: #fff;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
