@@ -62,7 +62,7 @@ export default function VideoPlayer({
   const wrapperRef = useRef<HTMLDivElement | null>(null); // 播放器外框，全螢幕的目標元素
   const [isFullscreen, setIsFullscreen] = useState(false); // 是否處於全螢幕
   const isMobile = useIsMobile(); // 手機版：volume 屬性在 iOS 唯讀，音量滑桿無效，只留靜音鍵
-  // 播放約 10 秒後自動隱藏標題與控制列；點擊播放器再次顯示
+  // 播放一段時間後自動隱藏標題與控制列（AUTO_HIDE_MS）；點擊播放器再次顯示
   const [controlsHidden, setControlsHidden] = useState(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -79,7 +79,7 @@ export default function VideoPlayer({
   // 控制項隱藏時附加的樣式（透明 + 不可點）；含前置空白方便字串串接
   const hideCls = controlsHidden ? ` ${styles.hidden}` : "";
 
-  // 播放時：10 秒後自動隱藏；暫停 / 尚未開始播放：清除計時並保持顯示
+  // 播放時：AUTO_HIDE_MS 後自動隱藏；暫停 / 尚未開始播放：清除計時並保持顯示
   useEffect(() => {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     if (isPlaying && hasStarted) {
@@ -229,6 +229,12 @@ export default function VideoPlayer({
         autoPlay // 配合 muted 讓手機也能自動開播
         width="100%"
         height="100%"
+        onClickPreview={() => {
+          // 點擊封面（light）當下就標記已開始並播放：
+          // 不再等 play 事件，避免播放事件延遲時控制列與播放鍵一直不出現
+          setHasStarted(true);
+          setIsPlaying(true);
+        }}
         onPlay={() => {
           setIsPlaying(true); // 開始播放 → 隱藏標題
           setHasStarted(true); // 標記已開始，之後才顯示自製控制鍵
