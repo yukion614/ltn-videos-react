@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import NotFoundPanel from "@/app/_components/NotFoundPanel/NotFoundPanel";
 import VideoDetail from "@/app/_components/VideoDetail/VideoDetail";
 import type { BrandVideoResponse } from "@/app/_interfaces/BrandVideo";
 import type { PlaylistVideoItem } from "@/app/_interfaces/playlist";
@@ -106,10 +107,8 @@ export default function VideoFallbackPage() {
 
   if (state.status === "notfound") {
     return (
-      <main style={{ padding: "40px 16px", textAlign: "center" }}>
-        <h1>找不到這支影片</h1>
-        <p>影片可能已下架，或網址有誤。</p>
-        <a href="/">返回首頁</a>
+      <main>
+        <NotFoundPanel />
       </main>
     );
   }
