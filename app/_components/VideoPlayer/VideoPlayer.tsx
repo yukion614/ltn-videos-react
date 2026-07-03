@@ -217,6 +217,9 @@ export default function VideoPlayer({
       className={styles.playerWrapper}
       style={{ width, height }}
       onClick={revealControls}
+      // 桌機：滑鼠移入 / 移動就顯示控制列（手機無 hover，沿用點擊）
+      onMouseEnter={isMobile ? undefined : revealControls}
+      onMouseMove={isMobile ? undefined : revealControls}
     >
       <ReactPlayer
         src={src}
