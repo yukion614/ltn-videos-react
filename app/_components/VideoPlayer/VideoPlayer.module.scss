@@ -10,6 +10,12 @@
   flex-shrink: 0;
 }
 
+// 播放約 10 秒後自動隱藏的控制項：淡出且不可點（點擊播放器可再顯示）
+.hidden {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
 .playToggle {
   position: absolute;
   z-index: 3;
@@ -61,6 +67,7 @@
   gap: 8px;
   padding: 8px 14px;
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+  transition: opacity 0.3s;
 }
 
 .time {
@@ -166,6 +173,7 @@
   height: 42%;
   background: linear-gradient(rgba(0, 0, 0, 0.82), transparent);
   pointer-events: none;
+  transition: opacity 0.3s;
 }
 
 .mediaTitleTop {
@@ -174,15 +182,17 @@
   right: 0;
   left: 0;
   z-index: 3;
-  display: -webkit-box;
-  overflow: hidden;
+  display: block;
   padding: 12px 14px 40px;
   color: #fff;
   font-size: var(--player-title-size, 16px);
   font-weight: 800;
   line-height: 1.42;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  // 標題只顯示一行，超過寬度尾端以 … 省略
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: opacity 0.3s;
 }
 
 // 可點擊的標題：整塊疊在影片頂端，點選後進入該影片詳情頁

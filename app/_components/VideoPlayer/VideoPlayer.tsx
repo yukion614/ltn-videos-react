@@ -10,6 +10,9 @@ const ReactPlayer = dynamic(() => import("react-player"), {
   ssr: false,
 });
 
+// 播放後多久自動隱藏標題與控制列（毫秒）
+const AUTO_HIDE_MS = 5000;
+
 interface VideoPlayerProps {
   src?: string;
   poster?: string; //影片還沒播放前顯示的封面圖
@@ -59,10 +62,50 @@ export default function VideoPlayer({
   const wrapperRef = useRef<HTMLDivElement | null>(null); // 播放器外框，全螢幕的目標元素
   const [isFullscreen, setIsFullscreen] = useState(false); // 是否處於全螢幕
   const isMobile = useIsMobile(); // 手機版：volume 屬性在 iOS 唯讀，音量滑桿無效，只留靜音鍵
+  // 播放約 10 秒後自動隱藏標題與控制列；點擊播放器再次顯示
+  const [controlsHidden, setControlsHidden] = useState(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isSeekable = Number.isFinite(duration) && duration > 0; // 直播 duration 是 Infinity，不顯示進度條
   // 封面（light）尚未點擊播放前，react-player 會顯示自己的播放鍵；此時隱藏自製控制鍵，避免兩顆按鈕重疊
   const previewActive = Boolean(poster) && !hasStarted;
+  // 控制軸顯示時機：
+  // - bottom 標題（首頁／詳情）：僅播放中顯示，暫停時讓位給底部標題（維持原行為）
+  // - top 標題（節目頁）：底部沒有標題，播放一開始就常駐控制軸，
+  //   避免緩衝／播完／自動播放中斷等使 isPlaying 短暫變 false 時整條控制軸消失
+  const showControlBar =
+    !previewActive && (isPlaying || (titlePosition === "top" && hasStarted));
+
+  // 控制項隱藏時附加的樣式（透明 + 不可點）；含前置空白方便字串串接
+  const hideCls = controlsHidden ? ` ${styles.hidden}` : "";
+
+  // 播放時：10 秒後自動隱藏；暫停 / 尚未開始播放：清除計時並保持顯示
+  useEffect(() => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    if (isPlaying && hasStarted) {
+      hideTimerRef.current = setTimeout(
+        () => setControlsHidden(true),
+        AUTO_HIDE_MS,
+      );
+    } else {
+      setControlsHidden(false);
+    }
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, [isPlaying, hasStarted]);
+
+  // 點擊 / 觸控播放器:顯示控制項;播放中則重新計時再自動隱藏
+  const revealControls = () => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    setControlsHidden(false);
+    if (isPlaying && hasStarted) {
+      hideTimerRef.current = setTimeout(
+        () => setControlsHidden(true),
+        AUTO_HIDE_MS,
+      );
+    }
+  };
 
   // 監聽全螢幕狀態變化（含使用者按 Esc 退出），同步按鈕圖示
   useEffect(() => {
@@ -173,6 +216,7 @@ export default function VideoPlayer({
       ref={wrapperRef}
       className={styles.playerWrapper}
       style={{ width, height }}
+      onClick={revealControls}
     >
       <ReactPlayer
         src={src}
@@ -213,7 +257,7 @@ export default function VideoPlayer({
           type="button"
           className={`${styles.playToggle} ${
             isPlaying ? styles.playing : styles.paused
-          }`}
+          }${hideCls}`}
           onClick={() => setIsPlaying((prev) => !prev)}
           aria-label={isPlaying ? "暫停" : "播放"}
         >
@@ -232,9 +276,9 @@ export default function VideoPlayer({
         </button>
       ) : null}
 
-      {/* 底部控制列：播放中才顯示；暫停或封面尚未點擊時隱藏（保持畫面乾淨） */}
-      {isPlaying && !previewActive ? (
-        <div className={styles.progressBar}>
+      {/* 底部控制列：bottom 標題僅播放中顯示；top 標題（節目頁）播放後常駐 */}
+      {showControlBar ? (
+        <div className={`${styles.progressBar}${hideCls}`}>
           {/* 進度條：只有非直播（有總長度）才顯示 */}
           {isSeekable ? (
             <>
@@ -317,25 +361,29 @@ export default function VideoPlayer({
         </div>
       ) : null}
 
-      {/* 暫停／停止狀態：控制列已隱藏，獨立把全螢幕鍵放右下角，保持可用 */}
-      {!previewActive && !isPlaying && allowFullscreen ? (
+      {/* 暫停／停止狀態：控制列已隱藏時，獨立把全螢幕鍵放右下角，保持可用
+          （控制列常駐的 top 標題模式不需要，避免出現兩顆全螢幕鍵） */}
+      {!previewActive && !showControlBar && allowFullscreen ? (
         <div className={styles.fullscreenStandalone}>{fullscreenButton}</div>
       ) : null}
 
       {/* 標題疊放於上方：播放中也持續顯示（控制軸仍在底部） */}
       {title && titlePosition === "top" ? (
         <>
-          <span className={styles.gradientTop} aria-hidden="true" />
+          <span
+            className={`${styles.gradientTop}${hideCls}`}
+            aria-hidden="true"
+          />
           {titleHref ? (
             // 標題本身就是連結：整塊定位於頂端，點選進入該影片詳情頁
             <Link
               href={titleHref}
-              className={`${styles.mediaTitleTop} ${styles.mediaTitleLink}`}
+              className={`${styles.mediaTitleTop} ${styles.mediaTitleLink}${hideCls}`}
             >
               {title}
             </Link>
           ) : (
-            <span className={styles.mediaTitleTop}>{title}</span>
+            <span className={`${styles.mediaTitleTop}${hideCls}`}>{title}</span>
           )}
         </>
       ) : null}
