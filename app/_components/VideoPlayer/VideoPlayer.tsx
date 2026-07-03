@@ -153,6 +153,16 @@ export default function VideoPlayer({
     }
   }
 
+  // 只採信「有限且大於 0」的總長度。HLS（尤其短影音來源）在中繼資料尚未
+  // 解析完成前會先回報 Infinity/NaN，若照單全收會讓 isSeekable 卡在 false、
+  // 進度條永遠不出現。多個事件（loadedmetadata／timeupdate／durationchange）
+  // 都呼叫這裡補抓，任一先拿到有效值即可。
+  function syncDuration(next: number) {
+    if (Number.isFinite(next) && next > 0) {
+      setDuration((prev) => (prev === next ? prev : next));
+    }
+  }
+
   // 把秒數格式化成 m:ss
   function formatTime(sec: number) {
     if (!Number.isFinite(sec)) return "0:00";
@@ -253,11 +263,15 @@ export default function VideoPlayer({
           setMuted(el.muted);
           setVolume(el.volume);
         }}
+        onLoadedMetadata={(e) => syncDuration(e.currentTarget.duration)} // 中繼資料就緒時先抓一次總長度
         onTimeUpdate={(e) => {
           mediaRef.current = e.currentTarget; // 記住底層 video 元素
           setCurrentTime(e.currentTarget.currentTime); // 更新進度
+          // 短影音等來源的 HLS：durationchange 常先報 Infinity 再不補發，
+          // 導致進度條一直不出現。播放中持續補抓 video.duration 當保險。
+          syncDuration(e.currentTarget.duration);
         }}
-        onDurationChange={(e) => setDuration(e.currentTarget.duration)} // 取得總長度
+        onDurationChange={(e) => syncDuration(e.currentTarget.duration)} // 取得總長度（僅採信有限值）
       />
 
       {/* 自製播放/暫停鍵，置中，避開底部標題；封面播放鍵還在時先不顯示，避免重疊 */}
