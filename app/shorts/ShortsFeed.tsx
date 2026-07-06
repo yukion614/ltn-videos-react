@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent, SyntheticEvent } from "react";
 import dynamic from "next/dynamic";
 import styles from "./page.module.scss";
+import NotFoundPanel from "@/app/_components/NotFoundPanel/NotFoundPanel";
 import type { ShortsApiItem, ShortsApiResponse } from "../_interfaces/shorts";
 import { watchUrlToSlug } from "../_lib/videoDetail";
 
@@ -164,6 +165,10 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
     () => startId ?? null,
   );
 
+  // 網址 /shorts/{id} 指定的那則在整份清單裡都找不到 → 視同無效路由，顯示 404
+  // （對齊 video-fallback / programs 外殼「抓不到內容就顯示 NotFoundPanel」的行為）
+  const [notFound, setNotFound] = useState(false);
+
   const stageRef = useRef<HTMLElement | null>(null);
   const lockRef = useRef(false);
   const itemsRef = useRef<ShortsApiItem[]>(items);
@@ -224,7 +229,9 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
     if (hasMore && moreId && !loadingMore) {
       loadMore(); // 還沒載到，繼續往後找
     } else if (!hasMore) {
-      setTargetSlug(null); // 整份都沒有這個 slug，退回從頭播
+      // 整份清單都翻完仍沒有這個 slug：網址指定了無效的單則 → 顯示 404
+      setNotFound(true);
+      setTargetSlug(null);
     }
   }, [targetSlug, items, hasMore, moreId, loadingMore, loadMore]);
 
@@ -357,6 +364,15 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
   }, [navigate]);
 
   const current = items[index];
+
+  // 網址指定了不存在的單則：整頁顯示 404（與其他外殼頁一致）
+  if (notFound) {
+    return (
+      <main className={styles.stage} ref={stageRef}>
+        <NotFoundPanel />
+      </main>
+    );
+  }
 
   return (
     <main className={styles.stage} ref={stageRef}>
