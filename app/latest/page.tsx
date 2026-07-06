@@ -4,6 +4,7 @@ import Link from "next/link";
 import styles from "@/styles/listpage.module.scss";
 import Crumb from "../_components/Crumb/Crumb";
 import { useInfiniteVideos } from "../hooks/useInfiniteVideos";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { watchUrlToSlug } from "../_lib/videoDetail";
 
 const crumbs = [
@@ -19,8 +20,10 @@ const crumbs = [
 
 export default function LatestPage() {
   // 無限往下載入的狀態與行為都封裝在 hook 裡，元件只負責畫面與掛上哨兵 ref
-  const { videos, loading, loadingMore, nextPage, sentinelRef } =
+  const { videos, loading, loadingMore, nextPage, sentinelRef, loadMore } =
     useInfiniteVideos();
+  // 手機版：捲到底自動載入（哨兵）；桌機版：按「看更多」手動載入
+  const isMobile = useIsMobile();
 
   return (
     <main className={styles.page}>
@@ -67,12 +70,25 @@ export default function LatestPage() {
           </div>
         )}
 
-        {/* 哨兵 + 狀態：捲到這裡就自動載入下一頁 */}
-        {!loading && nextPage !== null && (
-          <div ref={sentinelRef} className={styles.status}>
-            {loadingMore ? "載入中…" : ""}
-          </div>
-        )}
+        {/* 還有下一頁時：手機版掛哨兵自動載入，桌機版顯示「看更多」按鈕 */}
+        {!loading &&
+          nextPage !== null &&
+          (isMobile ? (
+            <div ref={sentinelRef} className={styles.status}>
+              {loadingMore ? "載入中…" : ""}
+            </div>
+          ) : (
+            <div className={styles.moreWrap}>
+              <button
+                type="button"
+                className={styles.moreButton}
+                onClick={loadMore}
+                disabled={loadingMore}
+              >
+                {loadingMore ? "載入中…" : "看更多"}
+              </button>
+            </div>
+          ))}
         {!loading && nextPage === null && videos.length > 0 && (
           <p className={styles.status}>已經到底了</p>
         )}
