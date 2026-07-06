@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import type { ShortsRailItem } from "@/app/_interfaces/shorts";
 import { useDragScroll } from "@/app/hooks/useDragScroll";
+import { watchUrlToSlug } from "@/app/_lib/videoDetail";
 import styles from "./ShortsRail.module.scss";
 
 // react-player v3：以 src 指定來源（v2 的 url 已停用）
@@ -46,9 +47,11 @@ export default function ShortsRail({ items }: { items: ShortsRailItem[] }) {
               setHoveredId((cur) => (cur === short.id ? null : cur))
             }
           >
-            {/* 整張卡片是連結，點擊進入 /shorts/{id} 觀看頁；拖曳時 useDragScroll 會攔截 click 不誤觸 */}
+            {/* 整張卡片是連結，點擊進入 /shorts/{slug} 觀看頁；拖曳時 useDragScroll 會攔截 click 不誤觸。
+                shorts 頁以 watchUrl 的 slug 比對目標（見 ShortsFeed 的 itemSlug），
+                這裡連結也要用同一種 slug，否則對不上會被判為無效路由顯示 404 */}
             <Link
-              href={`/shorts/${short.id}`}
+              href={`/shorts/${watchUrlToSlug(short.watchUrl) ?? short.id}`}
               className={styles.cardLink}
               draggable={false}
             >
