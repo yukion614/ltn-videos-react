@@ -41,7 +41,7 @@ export default function LatestPage() {
           <div className={styles.grid}>
             {videos.map((video) => (
               <Link
-                href={`/topic/video/${watchUrlToSlug(video.watchUrl) ?? video.id}`}
+                href={`/latest/video/${watchUrlToSlug(video.watchUrl) ?? video.id}`}
                 className={styles.card}
                 key={video.id}
               >

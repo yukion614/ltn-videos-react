@@ -255,9 +255,15 @@ export interface Crumb {
  */
 export function buildVideoCrumbs(
   data: BrandVideoResponse | null,
-  opts?: { isTopic?: boolean },
+  opts?: { isTopic?: boolean; isLatest?: boolean },
 ): Crumb[] {
   const crumbs: Crumb[] = [{ href: "/", label: "首頁" }];
+
+  // 最新影片頁：只顯示「首頁 › 最新」，不帶 API 分類（/list 是扁平的最新清單）。
+  if (opts?.isLatest) {
+    crumbs.push({ href: "/latest", label: "最新" });
+    return crumbs;
+  }
 
   // topic 影片頁：保留「話題」入口，並顯示 API breadcrumb 的最後一層，
   // 但最後一層不帶 href，作為目前所在分類顯示。

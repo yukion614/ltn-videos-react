@@ -32,6 +32,7 @@ export default function config(phase: string): NextConfig {
             destination: "/video-fallback",
           },
           { source: "/topic/video/:id", destination: "/video-fallback" },
+          { source: "/latest/video/:id", destination: "/video-fallback" },
           { source: "/shorts/:id", destination: "/shorts" },
         ];
       },

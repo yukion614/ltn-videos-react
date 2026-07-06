@@ -79,15 +79,22 @@ export default function VideoDetail({
 }: VideoDetailProps) {
   const video = data.video;
   const playlistKey = data.playlist?.key ?? "";
-  // 從 topic 進來（videoBasePath 為 /topic/video）時，麵包屑只顯示到「話題」
+  // 從 topic 進來（videoBasePath 為 /topic/video）時，麵包屑只顯示到「話題」；
+  // 從最新進來（/latest/video）時只顯示到「最新」。
   const isTopic = videoBasePath.startsWith("/topic");
-  const crumbs = buildVideoCrumbs(data, { isTopic });
+  const isLatest = videoBasePath.startsWith("/latest");
+  const crumbs = buildVideoCrumbs(data, { isTopic, isLatest });
 
   return (
     <main className={styles.page}>
       <div className={styles.wrap}>
         {/* 麵包屑：build 時的 crumbs 當初值，client 端再以最新 API 覆蓋 */}
-        <LiveCrumb slug={videoSlug} initial={crumbs} isTopic={isTopic} />
+        <LiveCrumb
+          slug={videoSlug}
+          initial={crumbs}
+          isTopic={isTopic}
+          isLatest={isLatest}
+        />
 
         {/* 主要影片 */}
         <section className={styles.playerSection} aria-label="影片播放器">

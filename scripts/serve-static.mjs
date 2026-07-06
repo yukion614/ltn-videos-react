@@ -108,7 +108,7 @@ async function serveStatic(req, res) {
     // 影片詳細頁 SPA fallback：build 後新增、沒有預先產生檔案的影片，
     // 回 client 外殼頁 /video-fallback/（200），由它讀網址 id 即時抓 API 渲染，
     // 免重 build 也不會 404。對應 deploy/nginx.conf 的同名 location。
-    if (/^\/(programs\/[^/]+\/video|topic\/video)\//.test(urlPath)) {
+    if (/^\/(programs\/[^/]+\/video|topic\/video|latest\/video)\//.test(urlPath)) {
       const shell = path.join(OUT_DIR, "video-fallback", "index.html");
       if ((await stat(shell).catch(() => null))?.isFile()) {
         res.writeHead(200, { "content-type": MIME[".html"] });

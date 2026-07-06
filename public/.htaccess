@@ -8,6 +8,7 @@
 #   /programs/{key}          -> /programs/_shell/index.html   （分類頁外殼）
 #   /programs/{key}/video/*  -> /video-fallback/index.html    （影片詳細頁外殼）
 #   /topic/video/*           -> /video-fallback/index.html
+#   /latest/video/*          -> /video-fallback/index.html
 #   /shorts/{id}             -> /shorts/index.html            （短影音單則外殼）
 #
 # 部署前提：Apache 需載入 mod_rewrite，且此目錄的 AllowOverride 至少含 FileInfo
@@ -15,6 +16,11 @@
 #
 # Next.js（output:"export"）會把 public/ 的檔案複製到 out/ 根目錄，
 # 因此本檔隨每次 build 一起輸出、隨靜態站一起部署，不必手動上傳。
+
+# 找不到檔案、又不符合下方任何 fallback 規則的網址（例如 /546、/亂打路由），
+# 交回 next export 產生的 404.html，顯示網站自己的 NotFoundPanel，
+# 而不是 Apache 內建的「The requested URL ... was not found」預設頁。
+ErrorDocument 404 /404.html
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
@@ -24,8 +30,8 @@
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # 影片詳細頁 SPA fallback：/programs/{key}/video/*、/topic/video/*
-  RewriteRule ^(programs/[^/]+/video|topic/video)/ /video-fallback/index.html [L]
+  # 影片詳細頁 SPA fallback：/programs/{key}/video/*、/topic/video/*、/latest/video/*
+  RewriteRule ^(programs/[^/]+/video|topic/video|latest/video)/ /video-fallback/index.html [L]
 
   # 短影音單則 SPA fallback：/shorts/{id}
   RewriteRule ^shorts/[^/]+/?$ /shorts/index.html [L]
