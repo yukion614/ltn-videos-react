@@ -22,7 +22,7 @@ const menuLinks = [
   { title: "國際", href: "https://news.ltn.com.tw/list/breakingnews/world" },
   { title: "地方", href: "https://news.ltn.com.tw/list/breakingnews/local" },
   { title: "蒐奇", href: "https://news.ltn.com.tw/list/breakingnews/novelty" },
-  { title: "影音", href: "https://video.ltn.com.tw" },
+  { title: "影音", href: "https://videos.ltn.com.tw" },
   { title: "財經", href: "https://ec.ltn.com.tw" },
   { title: "娛樂", href: "https://ent.ltn.com.tw" },
   { title: "汽車", href: "https://auto.ltn.com.tw" },
