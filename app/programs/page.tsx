@@ -11,8 +11,9 @@ import type {
 } from "../_interfaces/playlist";
 import styles from "./page.module.scss";
 import { watchUrlToSlug } from "../_lib/videoDetail";
+import { API_BASE } from "../_lib/api";
 
-const basePath = "https://video.ltn.com.tw/brand/api";
+const basePath = API_BASE;
 
 const crumbs = [
   {

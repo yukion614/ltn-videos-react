@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { VideoListItem } from "../_interfaces/videoArticle";
+import { API_BASE } from "../_lib/api";
 
 // list/{page} 回傳：直接就是分頁後的影片清單（上游已提供 nextPage / hasMore）
 interface ListResponse {
@@ -10,7 +11,7 @@ interface ListResponse {
 
 // 最新影片列表頁：直接打 list/{page} 做分頁，回傳即為影片清單，
 // 不需要像 playlist-list 那樣先取清單入口再分頁。
-const LIST_API = "https://video.ltn.com.tw/brand/api/list";
+const LIST_API = `${API_BASE}/list`;
 
 // useInfiniteVideos：封裝「無限往下載入影片清單」的狀態與行為。
 // 回傳畫面需要的資料與哨兵 ref，元件只要把 sentinelRef 掛到 DOM 即可。
@@ -71,6 +72,11 @@ export function useInfiniteVideos() {
     loadPage(1);
   }, [loadPage]);
 
+  // 桌機「看更多」用：手動載入下一頁；沒有更多時不動作
+  const loadMore = useCallback(() => {
+    if (nextPage !== null) loadPage(nextPage);
+  }, [nextPage, loadPage]);
+
   // 哨兵：進入畫面就載入下一頁
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -87,5 +93,5 @@ export function useInfiniteVideos() {
     return () => observer.disconnect();
   }, [nextPage, loadPage]);
 
-  return { videos, loading, loadingMore, nextPage, sentinelRef };
+  return { videos, loading, loadingMore, nextPage, sentinelRef, loadMore };
 }

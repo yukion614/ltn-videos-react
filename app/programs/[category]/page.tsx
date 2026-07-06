@@ -25,8 +25,9 @@ import { useDocumentMeta } from "@/app/_lib/useDocumentMeta";
 import { watchUrlToSlug, toProxiedHls } from "@/app/_lib/videoDetail";
 import type { BrandVideoResponse } from "@/app/_interfaces/BrandVideo";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
+import { API_BASE } from "@/app/_lib/api";
 
-const basePath = "https://video.ltn.com.tw/brand/api";
+const basePath = API_BASE;
 
 type ProgramEpisode = {
   id: string;

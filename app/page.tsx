@@ -17,6 +17,7 @@ import type {
   CongressLiveItem,
 } from "./_interfaces/playlist";
 import { toProxiedHls, watchUrlToSlug } from "./_lib/videoDetail";
+import { API_BASE } from "./_lib/api";
 
 // 節目卡片：清單資訊 + 首支影片的封面與連結
 type ProgramCard = PlaylistEntry & {
@@ -120,7 +121,7 @@ export default function Home() {
   const [programCards, setProgramCards] = useState<ProgramCard[]>([]); //節目
   const [programTitle, setProgramTitle] = useState("節目"); //節目區標題
   const [congress, setCongress] = useState<CongressLiveResponse | null>(null); //國會直播
-  const basePath = "https://video.ltn.com.tw/brand/api";
+  const basePath = API_BASE;
 
   // 國會議程：來自 congress-live 的 items
   const agenda: CongressLiveItem[] = congress?.items ?? [];

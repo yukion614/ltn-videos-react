@@ -1,4 +1,4 @@
-// 播放清單列表 API：https://video.ltn.com.tw/brand/api/playlist-list/home
+// 播放清單列表 API：https://data.ltn.com.tw/brand/api/playlist-list/home
 
 // 單一播放清單的索引項目
 export interface PlaylistEntry {
@@ -29,7 +29,7 @@ export interface ProgramListResponse {
   items: PlaylistEntry[]; // 所有節目播放清單
 }
 
-// 播放清單影片項目 API：https://video.ltn.com.tw/brand/api/playlist-items/{id}/{page}
+// 播放清單影片項目 API：https://data.ltn.com.tw/brand/api/playlist-items/{id}/{page}
 
 export interface PlaylistVideoItem {
   id: number; // 影片 ID

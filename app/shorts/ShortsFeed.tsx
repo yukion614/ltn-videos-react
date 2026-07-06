@@ -7,6 +7,7 @@ import styles from "./page.module.scss";
 import NotFoundPanel from "@/app/_components/NotFoundPanel/NotFoundPanel";
 import type { ShortsApiItem, ShortsApiResponse } from "../_interfaces/shorts";
 import { watchUrlToSlug } from "../_lib/videoDetail";
+import { API_BASE } from "../_lib/api";
 
 // 網址與比對統一用 slug（/video/{slug}）；沒有 slug 時退回數字 id
 function itemSlug(item: ShortsApiItem): string {
@@ -19,7 +20,7 @@ const ReactPlayer = dynamic(() => import("react-player"), {
   loading: () => <div className={styles.playerLoading}>載入中</div>,
 });
 
-const basePath = "https://video.ltn.com.tw/brand/api";
+const basePath = API_BASE;
 
 // 上游只對 *.ltn.com.tw 開 CORS：正式環境直接用原始網址；
 // 本機 dev（localhost）才走 next.config.ts 的同源代理 /hls/*

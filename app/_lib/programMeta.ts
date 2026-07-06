@@ -3,13 +3,15 @@
 // 都改呼叫 getPrograms()；下方的後備清單只在 API 取不到時使用，
 // 同時也是元件首次 render 的初值（避免閃爍），以及 build 時 generateStaticParams
 // 至少要有一筆（output:"export" 不接受空的動態參數清單）。
+import { API_BASE } from "./api";
+
 export interface ProgramMeta {
   name: string; // 節目名稱（後端 title）
   key: string; // 後端 playlist key，直接作為 /programs/[category] 的路由參數
   ep: number; // 目前集數（後端 count）
 }
 
-const basePath = "https://video.ltn.com.tw/brand/api";
+const basePath = API_BASE;
 
 // 後備清單：刻意留空——節目清單以後端為唯一來源，不再放會過時的寫死資料。
 // 也是各元件的初值（首次 render 先空、後端回來再填）。

@@ -6,8 +6,9 @@ import type {
   PlaylistItemsResponse,
   PlaylistVideoItem,
 } from "@/app/_interfaces/playlist";
+import { API_BASE } from "./api";
 
-const basePath = "https://video.ltn.com.tw/brand/api";
+const basePath = API_BASE;
 
 /**
  * 取得「話題」第一支影片的 watchUrl。

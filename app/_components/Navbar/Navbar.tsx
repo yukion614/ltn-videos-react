@@ -15,6 +15,7 @@ import {
   toProxiedHls,
   watchUrlToSlug,
 } from "@/app/_lib/videoDetail";
+import { API_BASE } from "@/app/_lib/api";
 
 const programLinks = [
   "政面交鋒",
@@ -66,7 +67,7 @@ export default function Navbar() {
     event.preventDefault();
   };
 
-  const basePath = "https://video.ltn.com.tw/brand/api";
+  const basePath = API_BASE;
   async function fetchLatestVideo() {
     const url = `${basePath}/list`;
     const limit = 1;
