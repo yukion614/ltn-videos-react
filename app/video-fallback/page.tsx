@@ -76,19 +76,33 @@ export default function VideoFallbackPage() {
         return;
       }
 
+      // 有播放清單就走 playlist-items 分頁；沒有 key 就不必打（省一次空請求）
       const playlistKey = data.playlist?.key ?? "";
-      const firstPage = await getPlaylistPage(playlistKey);
+      const firstPage = playlistKey
+        ? await getPlaylistPage(playlistKey)
+        : { items: [], nextPage: null };
       if (cancelled) return;
-      const initialItems = firstPage.items.filter(
+
+      let initialItems = firstPage.items.filter(
         (item) => item.id !== data.video.id,
       );
+      let initialNextPage = firstPage.nextPage;
+
+      // 沒有播放清單（如最新頁的單片，playlist 回傳空陣列）或清單抓不到內容時，
+      // 退回用詳情 API 的 related 欄位。related 是固定一批、沒有分頁，故 nextPage 為 null。
+      if (initialItems.length === 0) {
+        initialItems = (data.related ?? []).filter(
+          (item) => item.id !== data.video.id,
+        );
+        initialNextPage = null;
+      }
 
       setState({
         status: "ready",
         data,
         videoBasePath: parsed.videoBasePath,
         initialItems,
-        initialNextPage: firstPage.nextPage,
+        initialNextPage,
       });
     })();
 
