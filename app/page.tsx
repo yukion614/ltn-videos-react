@@ -263,6 +263,7 @@ export default function Home() {
             src={mainVideos[leadVideo].hlsUrl}
             poster={""}
             title={mainVideos[leadVideo].title}
+            allowFullscreen
           />
         ) : null}
         {/* <VideoMedia
@@ -281,6 +282,7 @@ export default function Home() {
                 src={mainVideos[leadVideo].hlsUrl}
                 poster={""}
                 title={mainVideos[leadVideo].title}
+                allowFullscreen
               />
             ) : null}
           </article>
