@@ -22,9 +22,71 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: "自由影音",
-  description: "自由影音首頁",
+  description: "直擊新聞現場，透過畫面掌握即時新聞脈動。",
+  applicationName: "自由時報電子報",
+  authors: [{ name: "自由時報電子報" }],
+  keywords: [
+    "自由影音",
+    "自由時報",
+    "自由時報電子報",
+    "Liberty Times Net",
+    "LTN",
+  ],
+  // 讓搜尋引擎收錄並允許大張圖片預覽（對齊官網 max-image-preview:large）
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+    },
+  },
   icons: {
     icon: "/faviconV2.png",
+    // iOS 加到主畫面用的圖示（官網有、原本專案缺）
+    apple: [
+      { url: "https://www.ltn.com.tw/assets/images/ltn.png", sizes: "180x180" },
+    ],
+    other: [
+      {
+        rel: "apple-touch-icon-precomposed",
+        url: "https://www.ltn.com.tw/assets/images/ltn.png",
+      },
+      // 舊版分享服務抓縮圖用
+      {
+        rel: "image_src",
+        url: "https://video.ltn.com.tw/assets/images/1200_LTN.png",
+      },
+    ],
+  },
+  // 首頁層級的 Open Graph 預設值；影片／短影音詳情頁會再各自覆蓋
+  openGraph: {
+    type: "website",
+    siteName: "自由時報電子報",
+    title: "自由電子報影音頻道",
+    description: "直擊新聞現場，透過畫面掌握即時新聞脈動。",
+    locale: "zh_TW",
+    images: [
+      {
+        url: "https://video.ltn.com.tw/assets/images/1200_LTN.png",
+        type: "image/png",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    site: "@ltntw",
+    creator: "@ltntw",
+    title: "自由電子報影音頻道",
+    description: "直擊新聞現場，透過畫面掌握即時新聞脈動。",
+    images: ["https://video.ltn.com.tw/assets/images/1200_LTN.png"],
+  },
+  other: {
+    // Google News 專用關鍵字
+    news_keywords: "自由影音, 自由時報, 自由時報電子報, Liberty Times Net, LTN",
+    copyright: "自由時報電子報",
+    "dcterms.rightsHolder": "自由時報電子報",
   },
 };
 
@@ -36,6 +98,11 @@ export default function RootLayout({
   return (
     <html lang="zh-Hant-TW" suppressHydrationWarning>
       <head>
+        {/* Facebook 應用程式 ID：FB 分享成效統計用。
+            必須是 property 形式，FB 爬蟲才讀得到；Next Metadata 的 other 只會輸出
+            name=，故在此直接放原生標籤。 */}
+        <meta property="fb:app_id" content="140490219413038" />
+
         {/* Google Tag Manager */}
         <Script id="gtm" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
