@@ -100,7 +100,8 @@ export default function VideoDetail({
         <section className={styles.playerSection} aria-label="影片播放器">
           <VideoPlayer
             src={toProxiedHls(video.hlsUrl)}
-            poster={video.posterUrl}
+            //poster={video.posterUrl}//想要自動撥放 就不要傳入poster
+            poster=""
             width="100%"
             allowFullscreen
           />
