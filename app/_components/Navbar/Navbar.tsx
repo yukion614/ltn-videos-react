@@ -58,9 +58,6 @@ export default function Navbar() {
     fetchTopicFirstVideo();
   }, []);
 
-  useEffect(() => {
-    console.log("latestVideo updated:", latestVideo[0]?.id);
-  }, [latestVideo]);
   const isDarkMode = mounted && resolvedTheme === "dark";
 
   const handleLinkClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
