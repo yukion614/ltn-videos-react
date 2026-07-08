@@ -7,6 +7,7 @@ import styles from "./page.module.scss";
 import NotFoundPanel from "@/app/_components/NotFoundPanel/NotFoundPanel";
 import type { ShortsApiItem, ShortsApiResponse } from "../_interfaces/shorts";
 import { watchUrlToSlug } from "../_lib/videoDetail";
+import { useDocumentMeta } from "../_lib/useDocumentMeta";
 import { API_BASE } from "../_lib/api";
 
 // 網址與比對統一用 slug（/video/{slug}）；沒有 slug 時退回數字 id
@@ -365,6 +366,26 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
   }, [navigate]);
 
   const current = items[index];
+
+  // 目前這則短影音的 meta：隨捲動切換而動態更新（瀏覽器分頁標題、og/twitter 分享預覽）。
+  // 靜態匯出沒有 server 端 generateMetadata，只能在瀏覽器把當前這則的資料補進 <head>；
+  // 元件切換／卸載時 useDocumentMeta 會自動還原。必須放在下方 early return 之前，
+  // 避免違反 hooks 呼叫順序。
+  useDocumentMeta(
+    current
+      ? {
+          title: `${current.title}｜自由影音`,
+          description: current.summary || current.description,
+          // canonical / og:url：用當前站台網域 + /shorts/{slug}，對齊網址列 replaceState 的 slug
+          canonicalUrl:
+            typeof window !== "undefined"
+              ? `${window.location.origin}/shorts/${itemSlug(current)}`
+              : undefined,
+          imageUrl: current.posterUrl,
+          ogType: "video.other",
+        }
+      : null,
+  );
 
   // 網址指定了不存在的單則：整頁顯示 404（與其他外殼頁一致）
   if (notFound) {

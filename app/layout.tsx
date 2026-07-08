@@ -21,10 +21,20 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
+  // 站台網域基準：讓下方的 canonical / og:url 等相對路徑能解析成完整網址
+  metadataBase: new URL("https://videos.ltn.com.tw"),
   title: "自由影音",
   description: "直擊新聞現場，透過畫面掌握即時新聞脈動。",
   applicationName: "自由時報電子報",
   authors: [{ name: "自由時報電子報" }],
+  // 正規網址（避免重複內容被分散權重）；輸出 <link rel="canonical">
+  alternates: {
+    canonical: "/",
+  },
+  // Google Search Console 網站擁有權驗證；輸出 <meta name="google-site-verification">
+  verification: {
+    google: "sPp7Kk7Tqa6LK-wWblS9Fby069Wpy4DNTaMyjKHxveU",
+  },
   keywords: [
     "自由影音",
     "自由時報",
@@ -66,6 +76,8 @@ export const metadata: Metadata = {
     siteName: "自由時報電子報",
     title: "自由電子報影音頻道",
     description: "直擊新聞現場，透過畫面掌握即時新聞脈動。",
+    // 分享到社群時的正規網址；相對路徑會用 metadataBase 補成完整網址
+    url: "/",
     locale: "zh_TW",
     images: [
       {
