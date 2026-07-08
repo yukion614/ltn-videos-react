@@ -52,6 +52,10 @@ export default function ShortsRail({ items }: { items: ShortsRailItem[] }) {
                 這裡連結也要用同一種 slug，否則對不上會被判為無效路由顯示 404 */}
             <Link
               href={`/shorts/${watchUrlToSlug(short.watchUrl) ?? short.id}`}
+              // /shorts/:id 是靠 rewrite 導回 /shorts 外殼的假路由，沒有對應的靜態
+              // RSC payload（index.txt），開啟預抓取會對不存在的檔案發出 404。點擊導航
+              // 不受影響，這裡關掉 prefetch 純粹避免 console 噴一整排 404。
+              prefetch={false}
               className={styles.cardLink}
               draggable={false}
             >

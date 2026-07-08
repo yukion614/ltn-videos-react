@@ -54,10 +54,11 @@ function toVideoHref(slug: string, videoKey: string | number) {
 function SectionHeader({ name, href }: { name: string; href: string }) {
   return (
     <div className={styles.sectionHeader}>
-      <Link className={styles.name} href={href}>
+      {/* /programs/{key} 是導向 _shell 外殼的假路由，沒有靜態 index.txt；關掉 prefetch 避免 404 */}
+      <Link className={styles.name} href={href} prefetch={false}>
         {name}
       </Link>
-      <Link className={styles.more} href={href}>
+      <Link className={styles.more} href={href} prefetch={false}>
         看更多
       </Link>
     </div>
@@ -150,6 +151,8 @@ export default function ProgramsPage() {
                       section.slug,
                       watchUrlToSlug(video.watchUrl) ?? video.id,
                     )}
+                    // 影片假路由(導向 video-fallback)，沒有靜態 index.txt；關掉 prefetch 避免 404
+                    prefetch={false}
                     key={video.id}
                   >
                     <span className={styles.media}>

@@ -26,6 +26,9 @@ export default function VideoPlayer({
   return (
     <Link
       href={slug}
+      // slug 多半指向 /topic/video、/programs/{category}/video 這類導向 video-fallback
+      // 外殼的假路由，沒有對應的靜態 index.txt；關掉 prefetch 避免預抓取打出 404。
+      prefetch={false}
       className={[
         variant === "row" ? styles.topicRow : styles.topicLead,
         fill ? styles.fill : "",

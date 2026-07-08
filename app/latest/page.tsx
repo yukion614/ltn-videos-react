@@ -45,6 +45,9 @@ export default function LatestPage() {
             {videos.map((video) => (
               <Link
                 href={`/latest/video/${watchUrlToSlug(video.watchUrl) ?? video.id}`}
+                // /latest/video/:id 是導向 video-fallback 外殼的假路由，沒有靜態
+                // index.txt，關掉 prefetch 以免預抓取打出 404（點擊導航照常運作）。
+                prefetch={false}
                 className={styles.card}
                 key={video.id}
               >

@@ -100,6 +100,9 @@ export default function RelatedVideos({
           <Link
             className={styles.recommendCard}
             href={`${videoBasePath}/${watchUrlToSlug(item.watchUrl) ?? item.id}`}
+            // videoBasePath 指向 /topic/video 或 /programs/{category}/video 這類導向
+            // video-fallback 外殼的假路由，沒有靜態 index.txt；關掉 prefetch 避免 404。
+            prefetch={false}
             key={item.id}
           >
             <span className={styles.thumb}>
