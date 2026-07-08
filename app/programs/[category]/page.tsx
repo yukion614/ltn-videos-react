@@ -106,6 +106,8 @@ function CategoryContent() {
   const [thumbnailPool, setThumbnailPool] = useState<VideoListItem[]>([]);
   // 第一則影片的播放網址（列表 API 不含 hlsUrl，需另打詳情補上）
   const [leadHls, setLeadHls] = useState<string>("");
+  // 第一則影片的進度條預覽 sprite（同樣列表 API 沒有，需另打詳情補上）
+  const [leadSprite, setLeadSprite] = useState<string>("");
   // 手機版：第一則播放器滑過頂端後固定在最上層
   const isMobile = useIsMobile(759);
   const leadWrapRef = useRef<HTMLDivElement | null>(null);
@@ -239,15 +241,21 @@ function CategoryContent() {
 
     let cancelled = false;
     setLeadHls("");
+    setLeadSprite("");
     fetch(`${basePath}/video/${leadSlug}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((detail: BrandVideoResponse | null) => {
         if (cancelled) return;
         // 詳情可能取不到 video（下架／異常），補空字串讓畫面退回縮圖
         setLeadHls(toProxiedHls(detail?.video?.hlsUrl ?? "") ?? "");
+        // sprite 用 CSS background 顯示、不受 CORS 限制，直接用原始網址
+        setLeadSprite(detail?.video?.spriteUrl ?? "");
       })
       .catch(() => {
-        if (!cancelled) setLeadHls("");
+        if (!cancelled) {
+          setLeadHls("");
+          setLeadSprite("");
+        }
       });
 
     return () => {
@@ -360,7 +368,7 @@ function CategoryContent() {
         <div className={styles.tabsWrap}>
           <nav className={styles.programTabs} aria-label="節目分類">
             {programs.map((item) => (
-              <Link href={`/programs/${item.key}`} key={item.key}>
+              <Link href={`/programs/${item.key}`} prefetch={false} key={item.key}>
                 {item.name}
               </Link>
             ))}
@@ -388,6 +396,7 @@ function CategoryContent() {
             <Link
               className={item.key === slug ? styles.tabActive : undefined}
               href={`/programs/${item.key}`}
+              prefetch={false}
               key={item.key}
             >
               {item.name}
@@ -447,6 +456,7 @@ function CategoryContent() {
                             title={item.title}
                             titleHref={item.href}
                             titlePosition="top"
+                            spriteUrl={leadSprite}
                             allowFullscreen
                           />
                         </div>

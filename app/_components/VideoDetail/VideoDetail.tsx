@@ -102,6 +102,7 @@ export default function VideoDetail({
             src={toProxiedHls(video.hlsUrl)}
             //poster={video.posterUrl}//想要自動撥放 就不要傳入poster
             poster=""
+            spriteUrl={video.spriteUrl}
             width="100%"
             allowFullscreen
           />

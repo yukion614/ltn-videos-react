@@ -77,11 +77,50 @@
   font-variant-numeric: tabular-nums; // 數字等寬，避免跳動
 }
 
+// 進度條容器：包住 seek 滑桿，作為 sprite 預覽圖的定位基準
+.seekWrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+}
+
 .seek {
   flex: 1;
   height: 4px;
   cursor: pointer;
   accent-color: #fff; // 進度條已播放部分的顏色
+}
+
+// 拖曳／hover 進度條時，浮在滑桿上方、對準游標的 sprite 縮圖預覽
+.seekPreview {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transform: translateX(-50%); // 以 left 為中心對齊游標
+  pointer-events: none; // 不吃滑鼠事件，避免擋住 seek 拖曳
+}
+
+.seekPreviewImg {
+  width: 160px;
+  height: 90px;
+  border: 2px solid #fff;
+  border-radius: 6px;
+  background-repeat: no-repeat; // 只顯示 sprite 中的一格
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.seekPreviewTime {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .liveTag {

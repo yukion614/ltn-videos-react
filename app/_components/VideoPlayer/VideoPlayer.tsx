@@ -13,10 +13,20 @@ const ReactPlayer = dynamic(() => import("react-player"), {
 // 播放後多久自動隱藏標題與控制列（毫秒）
 const AUTO_HIDE_MS = 5000;
 
+// sprite 縮圖規格：後端固定「每 2 秒一格、10×10 格、每格 160×90、每張 1600×900」，
+// 多於 100 格就換下一張（Thumbnail_000000001.jpg → _000000002.jpg …）
+const SPRITE_INTERVAL = 2; // 每格代表的秒數
+const SPRITE_COLS = 10;
+const SPRITE_ROWS = 10;
+const SPRITE_TILE_W = 160;
+const SPRITE_TILE_H = 90;
+
 interface VideoPlayerProps {
   src?: string;
   poster?: string; //影片還沒播放前顯示的封面圖
   title?: string;
+  // 進度條預覽用的 sprite sheet 首圖（結尾 _000000001.jpg）；有值才顯示拖曳縮圖
+  spriteUrl?: string;
   // 標題連結：有值時，上方標題可點擊進入該影片詳情頁（僅 titlePosition="top" 生效）
   titleHref?: string;
   width?: number | string;
@@ -46,6 +56,7 @@ export default function VideoPlayer({
   src,
   poster,
   title,
+  spriteUrl,
   titleHref,
   width = "100%",
   height = "auto",
@@ -65,6 +76,11 @@ export default function VideoPlayer({
   // 播放一段時間後自動隱藏標題與控制列（AUTO_HIDE_MS）；點擊播放器再次顯示
   const [controlsHidden, setControlsHidden] = useState(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 拖曳／hover 進度條時的預覽：time = 游標對應秒數；left = 預覽框在進度條上的水平位置(px)
+  const [seekPreview, setSeekPreview] = useState<{
+    time: number;
+    left: number;
+  } | null>(null);
 
   const isSeekable = Number.isFinite(duration) && duration > 0; // 直播 duration 是 Infinity，不顯示進度條
   // 封面（light）尚未點擊播放前，react-player 會顯示自己的播放鍵；此時隱藏自製控制鍵，避免兩顆按鈕重疊
@@ -176,6 +192,38 @@ export default function VideoPlayer({
     const next = Number(e.target.value);
     if (mediaRef.current) mediaRef.current.currentTime = next;
     setCurrentTime(next);
+  }
+
+  // 依秒數換算出該格 sprite 的背景圖與位置（回傳可直接套用的 style）
+  function spriteTileStyle(time: number): React.CSSProperties | undefined {
+    if (!spriteUrl) return undefined;
+    const perSheet = SPRITE_COLS * SPRITE_ROWS; // 每張 100 格
+    const index = Math.floor(time / SPRITE_INTERVAL); // 第幾格（從 0 起算）
+    const sheet = Math.floor(index / perSheet) + 1; // 第幾張（1 起算）
+    const pos = index % perSheet; // 該張內的格子序號
+    const col = pos % SPRITE_COLS;
+    const row = Math.floor(pos / SPRITE_COLS);
+    // 把首圖網址的 _000000001 換成實際張號（保留其餘路徑與副檔名）
+    const sheetUrl = spriteUrl.replace(
+      /_\d+(\.\w+)$/,
+      `_${String(sheet).padStart(9, "0")}$1`,
+    );
+    return {
+      backgroundImage: `url("${sheetUrl}")`,
+      backgroundPosition: `-${col * SPRITE_TILE_W}px -${row * SPRITE_TILE_H}px`,
+      backgroundSize: `${SPRITE_COLS * SPRITE_TILE_W}px ${SPRITE_ROWS * SPRITE_TILE_H}px`,
+    };
+  }
+
+  // 游標在進度條上移動 → 換算對應秒數與水平位置，更新預覽（無 sprite 或直播則不顯示）
+  function updateSeekPreview(clientX: number, el: HTMLElement) {
+    if (!spriteUrl || !isSeekable) return;
+    const rect = el.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    // 預覽框寬 160px：夾在進度條範圍內，避免超出被播放器 overflow 裁掉
+    const half = SPRITE_TILE_W / 2;
+    const left = Math.min(rect.width - half, Math.max(half, ratio * rect.width));
+    setSeekPreview({ time: ratio * duration, left });
   }
 
   // 拖曳音量 → 更新音量，音量 > 0 時自動解除靜音
@@ -306,16 +354,43 @@ export default function VideoPlayer({
           {isSeekable ? (
             <>
               <span className={styles.time}>{formatTime(currentTime)}</span>
-              <input
-                type="range"
-                className={styles.seek}
-                min={0}
-                max={duration}
-                step="any"
-                value={currentTime}
-                onChange={handleSeek}
-                aria-label="播放進度"
-              />
+              <div
+                className={styles.seekWrap}
+                onMouseMove={(e) =>
+                  updateSeekPreview(e.clientX, e.currentTarget)
+                }
+                onMouseLeave={() => setSeekPreview(null)}
+                onTouchMove={(e) =>
+                  updateSeekPreview(e.touches[0].clientX, e.currentTarget)
+                }
+                onTouchEnd={() => setSeekPreview(null)}
+              >
+                {/* sprite 縮圖預覽：有 spriteUrl 且正在 hover／拖曳時才出現 */}
+                {spriteUrl && seekPreview ? (
+                  <div
+                    className={styles.seekPreview}
+                    style={{ left: seekPreview.left }}
+                  >
+                    <div
+                      className={styles.seekPreviewImg}
+                      style={spriteTileStyle(seekPreview.time)}
+                    />
+                    <span className={styles.seekPreviewTime}>
+                      {formatTime(seekPreview.time)}
+                    </span>
+                  </div>
+                ) : null}
+                <input
+                  type="range"
+                  className={styles.seek}
+                  min={0}
+                  max={duration}
+                  step="any"
+                  value={currentTime}
+                  onChange={handleSeek}
+                  aria-label="播放進度"
+                />
+              </div>
               <span className={styles.time}>{formatTime(duration)}</span>
             </>
           ) : (
@@ -401,6 +476,9 @@ export default function VideoPlayer({
             // 標題本身就是連結：整塊定位於頂端，點選進入該影片詳情頁
             <Link
               href={titleHref}
+              // titleHref 指向 /programs/{category}/video 這類導向 video-fallback 外殼的
+              // 假路由，沒有靜態 index.txt；關掉 prefetch 避免預抓取打出 404。
+              prefetch={false}
               className={`${styles.mediaTitleTop} ${styles.mediaTitleLink}${hideCls}`}
             >
               {title}

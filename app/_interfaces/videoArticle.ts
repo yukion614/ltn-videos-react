@@ -12,6 +12,9 @@ export interface VideoListItem extends vedioArticle {
   thumbnailUrl: string; // 列表縮圖 URL
   // /list 與 playlist-items 都不會回傳 hlsUrl；此欄位為前端另打詳情後補上（如 Navbar）
   hlsUrl?: string;
+  // 進度條預覽用的 sprite sheet 首圖 URL（結尾為 Thumbnail_000000001.jpg）；
+  // 同樣是列表 API 沒有、需另打詳情才拿得到，故為選填
+  spriteUrl?: string;
 }
 
 export interface VideoListResponse {
