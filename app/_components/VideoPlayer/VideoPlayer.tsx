@@ -2,13 +2,24 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import styles from "./VideoPlayer.module.scss";
 
-const ReactPlayer = dynamic(() => import("react-player"), {
-  ssr: false,
-});
+// 這個網址是不是 HLS（.m3u8）串流
+function isHlsSource(url?: string) {
+  return !!url && /\.m3u8($|\?)/i.test(url);
+}
+
+// 瀏覽器是否原生支援 HLS（iOS Safari / macOS Safari 皆為 true）。
+// 原生支援時直接把 .m3u8 餵給 <video> 即可，完全不需要 hls.js。
+function canPlayNativeHls() {
+  if (typeof document === "undefined") return false;
+  const v = document.createElement("video");
+  return (
+    v.canPlayType("application/vnd.apple.mpegurl") !== "" ||
+    v.canPlayType("application/x-mpegURL") !== ""
+  );
+}
 
 // 播放後多久自動隱藏標題與控制列（毫秒）
 const AUTO_HIDE_MS = 5000;
@@ -71,6 +82,8 @@ export default function VideoPlayer({
   const [hasStarted, setHasStarted] = useState(false); // 是否已真正開始播放（light 封面點擊前為 false）
   const mediaRef = useRef<HTMLVideoElement | null>(null); // 底層 <video> 元素，用來拖曳跳轉
   const wrapperRef = useRef<HTMLDivElement | null>(null); // 播放器外框，全螢幕的目標元素
+  // 非原生 HLS 瀏覽器（Chrome/Firefox/Android）用的 hls.js 實例，切換來源／卸載時要銷毀
+  const hlsRef = useRef<{ destroy: () => void } | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false); // 是否處於全螢幕
   const isMobile = useIsMobile(); // 手機版：volume 屬性在 iOS 唯讀，音量滑桿無效，只留靜音鍵
   // 播放一段時間後自動隱藏標題與控制列（AUTO_HIDE_MS）；點擊播放器再次顯示
@@ -110,6 +123,94 @@ export default function VideoPlayer({
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
   }, [isPlaying, hasStarted]);
+
+  // 把來源掛到底層 <video> 並嘗試自動播放。
+  //
+  // 【為什麼不用 react-player】react-player v3 只要看到 .m3u8 就一律走 hls.js
+  // 的 lazy chunk（hls-video-element），連原生支援 HLS 的 iOS 也是。那個 chunk 在
+  // iOS 首次造訪常載入失敗／卡住，外層 Suspense 又沒有 error boundary，導致 <video>
+  // 永遠不建立 → 黑畫面，重整（chunk 進快取）才好。這裡改成自己掛來源：
+  //  - iOS / Safari：原生支援 HLS，直接 video.src = m3u8，不需要 hls.js。
+  //  - Chrome / Firefox / Android：原生不支援 → 動態載入 hls.js 接上。
+  // 靜音自動播放被瀏覽器擋下時，切回暫停狀態露出可點的播放鍵（點擊必成功）。
+  useEffect(() => {
+    const video = mediaRef.current;
+    if (!video || !src || previewActive) return;
+    let cancelled = false;
+
+    // iOS 靜音自動播放的前提：play() 前 muted/playsInline 必須已是 true
+    video.muted = muted;
+    video.playsInline = true;
+
+    const tryAutoplay = () => {
+      if (cancelled) return;
+      const p = video.play();
+      if (p && typeof p.catch === "function") {
+        p.catch(() => {
+          // 自動播放被擋 → 顯示可點的播放鍵讓使用者手動點
+          if (!cancelled) setIsPlaying(false);
+        });
+      }
+    };
+
+    if (!isHlsSource(src) || canPlayNativeHls()) {
+      // 一般 mp4 或原生支援 HLS 的瀏覽器：直接設 src
+      video.src = src;
+      tryAutoplay();
+    } else {
+      // 非原生 HLS：動態載入 hls.js 接上（此路徑不會在 iOS 執行）
+      import("hls.js")
+        .then(({ default: Hls }) => {
+          if (cancelled) return;
+          if (Hls.isSupported()) {
+            const hls = new Hls();
+            hlsRef.current = hls;
+            hls.loadSource(src);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, tryAutoplay);
+          } else {
+            // 極少數：既不原生支援也不支援 hls.js，仍試著直接餵 src
+            video.src = src;
+            tryAutoplay();
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setIsPlaying(false);
+        });
+    }
+
+    return () => {
+      cancelled = true;
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+    // muted 只作為 play 前的初始值，不需要因為之後切靜音而重掛來源
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src, previewActive]);
+
+  // isPlaying 變動時同步底層 <video>（使用者按播放/暫停鍵）
+  useEffect(() => {
+    const video = mediaRef.current;
+    if (!video) return;
+    if (isPlaying) {
+      const p = video.play();
+      if (p && typeof p.catch === "function") {
+        p.catch(() => setIsPlaying(false));
+      }
+    } else {
+      video.pause();
+    }
+  }, [isPlaying]);
+
+  // muted / volume 變動時同步底層 <video>
+  useEffect(() => {
+    if (mediaRef.current) mediaRef.current.muted = muted;
+  }, [muted]);
+  useEffect(() => {
+    if (mediaRef.current) mediaRef.current.volume = volume;
+  }, [volume]);
 
   // 點擊 / 觸控播放器:顯示控制項;播放中則重新計時再自動隱藏
   const revealControls = () => {
@@ -279,41 +380,30 @@ export default function VideoPlayer({
       onMouseEnter={isMobile ? undefined : revealControls}
       onMouseMove={isMobile ? undefined : revealControls}
     >
-      <ReactPlayer
-        src={src}
-        controls={false} // 關掉原生控制列，改用下方自製播放鍵
-        light={poster}
-        playing={isPlaying} // 由 state 控制，暫停才會真的停住
-        muted={muted} // 由 state 控制；預設靜音以符合自動播放規定
-        volume={volume} // 音量 0~1
-        playsInline // iOS 必備：沒有它手機會擋掉行內自動播放（畫面卡住、按鈕顯示成暫停）
-        autoPlay // 配合 muted 讓手機也能自動開播
-        width="100%"
-        height="100%"
-        onClickPreview={() => {
-          // 點擊封面（light）當下就標記已開始並播放：
-          // 不再等 play 事件，避免播放事件延遲時控制列與播放鍵一直不出現
-          setHasStarted(true);
-          setIsPlaying(true);
-        }}
+      {/* 原生 <video>：來源掛載與自動播放由上方 useEffect 處理（iOS 原生 HLS /
+          其他瀏覽器 hls.js），不再經 react-player，避免其 hls lazy chunk 在 iOS
+          首次載入卡住導致 <video> 建不出來的黑畫面問題。 */}
+      <video
+        ref={mediaRef}
+        className={styles.video}
+        muted={muted}
+        playsInline
+        autoPlay
+        // controls 關閉，改用下方自製播放鍵
+        style={{ width: "100%", height: "100%", display: "block" }}
         onPlay={() => {
           setIsPlaying(true); // 開始播放 → 隱藏標題
           setHasStarted(true); // 標記已開始，之後才顯示自製控制鍵
         }}
         onPause={() => setIsPlaying(false)} // 暫停 → 顯示標題
         onVolumeChange={(e) => {
-          // react-player 內部每次 render 都會把 video.volume 重設回 props.volume，
-          // 我們的進度更新又讓元件每秒 re-render 數次。若狀態只往 video 單向寫，
-          // 使用者用手機硬體音量鍵調整後會被馬上覆蓋（表現為「一調就沒聲音」）。
-          // 這裡反過來把裝置實際的 muted/volume 同步回 state，讓受控值跟著裝置走、不再打架。
+          // 把裝置實際的 muted/volume 同步回 state（例如手機硬體音量鍵），讓受控值跟著裝置走
           const el = e.currentTarget;
-          mediaRef.current = el;
           setMuted(el.muted);
           setVolume(el.volume);
         }}
         onLoadedMetadata={(e) => syncDuration(e.currentTarget.duration)} // 中繼資料就緒時先抓一次總長度
         onTimeUpdate={(e) => {
-          mediaRef.current = e.currentTarget; // 記住底層 video 元素
           setCurrentTime(e.currentTarget.currentTime); // 更新進度
           // 短影音等來源的 HLS：durationchange 常先報 Infinity 再不補發，
           // 導致進度條一直不出現。播放中持續補抓 video.duration 當保險。

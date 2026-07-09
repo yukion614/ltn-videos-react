@@ -18,6 +18,7 @@ import type {
 } from "./_interfaces/playlist";
 import { toProxiedHls, watchUrlToSlug } from "./_lib/videoDetail";
 import { API_BASE } from "./_lib/api";
+import { useIsMobile } from "./hooks/useIsMobile";
 
 // 節目卡片：清單資訊 + 首支影片的封面與連結
 type ProgramCard = PlaylistEntry & {
@@ -122,6 +123,12 @@ export default function Home() {
   const [programTitle, setProgramTitle] = useState("節目"); //節目區標題
   const [congress, setCongress] = useState<CongressLiveResponse | null>(null); //國會直播
   const basePath = API_BASE;
+  // 首頁同時有 heroMobile 與桌機 .a1 兩個版位，各自掛一個 VideoPlayer。
+  // 兩個 <video> 同時對同一支 HLS 自動播放時，iOS 只允許一個真正呈現畫面，
+  // 可見的那個可能被藏起來的搶走 → 全黑（狀態仍是「播放中」）。這裡依斷點
+  // （對應 SCSS 的 920px：<920 顯示 heroMobile、≥920 顯示 .a1）只掛「看得到」
+  // 的那一個播放器，避免兩個搶播。
+  const isMobile = useIsMobile(919);
 
   // 國會議程：來自 congress-live 的 items
   const agenda: CongressLiveItem[] = congress?.items ?? [];
@@ -256,7 +263,7 @@ export default function Home() {
     <main className={styles.home}>
       {/* m版 hero 視窗 */}
       <section className={styles.heroMobile} aria-label="焦點影音">
-        {mainVideos[leadVideo] ? (
+        {isMobile && mainVideos[leadVideo] ? (
           <VideoPlayer
             src={mainVideos[leadVideo].hlsUrl}
             poster={""}
@@ -276,7 +283,7 @@ export default function Home() {
         <div className={styles.wrap}>
           {/* MAIN畫面 */}
           <article className={styles.lead}>
-            {mainVideos[leadVideo] ? (
+            {!isMobile && mainVideos[leadVideo] ? (
               <VideoPlayer
                 src={mainVideos[leadVideo].hlsUrl}
                 poster={""}
