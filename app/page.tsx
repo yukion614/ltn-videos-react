@@ -92,12 +92,10 @@ function VideoMedia({
   title,
   duration,
   tone,
-  compact = false,
 }: {
   title?: string;
   duration?: string;
   tone: number;
-  compact?: boolean;
 }) {
   return (
     <div className={`${styles.media} ${styles[`tone${tone % 8}`]}`}>
