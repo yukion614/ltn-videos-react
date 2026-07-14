@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import VideoPlayer from "./_components/VideoPlayer/VideoPlayer";
 import VideoThumbnail from "./_components/VideoThumbnail/VideoThumbnail";
 import ShortsRail from "./_components/ShortsRail/ShortsRail";
-import type { ShortsApiResponse, ShortsRailItem } from "./_interfaces/shorts";
+import type { ShortsRailItem } from "./_interfaces/shorts";
 import type { VideoListItem } from "./_interfaces/videoArticle";
 import type { BrandVideoResponse } from "./_interfaces/BrandVideo";
 import type {
@@ -194,20 +194,36 @@ export default function Home() {
     return data;
   }
 
-  async function fetchShorts(moreId = null) {
-    const endpoint = moreId ? `/shorts/${moreId}` : "/shorts";
-    const url = `${basePath}${endpoint}`;
-    const res = await fetch(url);
-    const data: ShortsApiResponse = await res.json();
-    return { data };
+  // 短影音區：清單來源同樣是 playlist-list/home 的 shorts 區塊。
+  // playlist-items 只回 id/title/publishAt/thumbnailUrl/watchUrl，沒有 ShortsRail
+  // hover 播放要用的 hlsUrl，故每支再打一次詳情 API 補齊（同 fetchFeaturedVideos 的做法）。
+  async function fetchShortsVideos(apiUrl: string, limit = 10) {
+    const items = await fetchPlaylistItems(apiUrl);
+
+    return Promise.all(
+      items.slice(0, limit).map(async (item): Promise<ShortsRailItem> => {
+        const slug = watchUrlToSlug(item.watchUrl);
+        const detailData: BrandVideoResponse | null = slug
+          ? await fetch(`${basePath}/video/${slug}`).then((r) => r.json())
+          : null;
+
+        return {
+          id: item.id,
+          title: item.title,
+          publishAt: item.publishAt,
+          watchUrl: item.watchUrl,
+          // 詳情的 posterUrl 與列表的 thumbnailUrl 是同一張圖；詳情取不到就退回列表縮圖，
+          // 至少卡片有封面不會黑掉
+          posterUrl: detailData?.video?.posterUrl ?? item.thumbnailUrl,
+          // 影片下架／回應異常時補空字串，ShortsRail 只是 hover 播不出來，不會整頁崩潰
+          hlsUrl: detailData?.video?.hlsUrl ?? "",
+        };
+      }),
+    );
   }
 
   useEffect(() => {
-    fetchShorts().then((res) => {
-      if (res.data?.items) setShorts(res.data.items);
-    });
-
-    // 抓一次播放清單列表，分別供「影音精選」主播放器與「話題」區使用
+    // 抓一次播放清單列表，供「影音精選」「話題」「短影音」「國會直播」各區使用
     fetchPlaylistList().then((listData) => {
       // 影音精選：取 main 區塊的第一份清單
       const featured = listData.sections.main?.items[0];
@@ -220,6 +236,12 @@ export default function Home() {
       if (topicEntry) {
         setTopicTitle(topicEntry.title);
         fetchPlaylistItems(topicEntry.apiUrl).then(setTopicVideos);
+      }
+
+      // 短影音：取 shorts 區塊的第一份清單
+      const shortsEntry = listData.sections.shorts?.items[0];
+      if (shortsEntry) {
+        fetchShortsVideos(shortsEntry.apiUrl).then(setShorts);
       }
 
       // 國會直播：取 congress 區塊的第一份清單，依其 apiUrl 抓議程資料
