@@ -45,7 +45,7 @@ export default function ExpandableContent({ html }: { html: string }) {
         >
           {expanded ? "收合" : "更多內容"}
           <svg
-            className={expanded ? styles.moreIconUp : styles.moreIcon}
+            className={expanded ? styles.moreIconUp : ""}
             viewBox="0 0 24 24"
             aria-hidden="true"
           >

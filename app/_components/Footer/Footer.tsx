@@ -7,10 +7,7 @@ export default function Footer() {
 
   if (pathname.startsWith("/shorts")) return null;
   return (
-    <footer
-      className={`${style.features_footer} ${style.boxTitle}`}
-      data-desc="底部選單"
-    >
+    <footer className={`${style.features_footer} `} data-desc="底部選單">
       <a href="https://www.ltn.com.tw/" title="自由時報" data-desc="自由時報">
         <img
           src="https://cache.ltn.com.tw/images/logo_foot.png"

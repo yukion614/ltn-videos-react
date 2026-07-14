@@ -137,7 +137,7 @@ export default function ProgramsPage() {
         <div className={styles.content}>
           {/* 節目清單 */}
           {sections.map((section, sectionIndex) => (
-            <section className={styles.section} key={section.id ?? section.title}>
+            <section key={section.id ?? section.title}>
               <SectionHeader
                 name={section.title}
                 href={toProgramHref(section.slug)}

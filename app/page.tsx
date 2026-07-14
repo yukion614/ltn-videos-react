@@ -102,7 +102,7 @@ function VideoMedia({
       {duration ? <span className={styles.duration}>{duration}</span> : null}
       {title ? (
         <>
-          <span className={styles.gradient} aria-hidden="true" />
+          <span aria-hidden="true" />
           <span className={styles.mediaTitle}>{title}</span>
         </>
       ) : null}

@@ -162,10 +162,7 @@ export default function Navbar() {
           </a>
         </div>
       </div>
-      <div
-        className={`${styles.subnav} ${isProgramOpen ? styles.open : ""}`}
-        onMouseEnter={() => setIsProgramOpen(true)}
-      >
+      <div className={`${styles.subnav} ${isProgramOpen ? styles.open : ""}`}>
         <div className={styles.subnavWrap}>
           {programLinks.map((link) => (
             <Link href="#" key={link} onClick={handleLinkClick}>
