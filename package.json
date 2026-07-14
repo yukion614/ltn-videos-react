@@ -5,9 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:embed": "vite build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "next start"
   },
   "dependencies": {
     "hls.js": "^1.6.16",
@@ -16,7 +14,6 @@
     "react": "19.0.0-rc-65a56d0e-20241020",
     "react-dom": "19.0.0-rc-65a56d0e-20241020",
     "react-player": "^3.4.0",
-    "react-router-dom": "^6.30.4",
     "sass": "^1.101.0"
   },
   "devDependencies": {
@@ -24,10 +21,8 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "@vitejs/plugin-react": "^4.7.0",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.0",
-    "typescript": "^5",
-    "vite": "^6.4.3"
+    "typescript": "^5"
   }
 }
