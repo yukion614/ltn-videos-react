@@ -6,19 +6,7 @@ import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import styles from "./Navbar.module.scss";
 
-const programLinks = [
-  "政面交鋒",
-  "自由說新聞",
-  "自由爆新聞",
-  "新聞360",
-  "官我什麼事",
-  "台海情勢簡報室",
-  "娛樂後視鏡",
-  "名人開講",
-];
-
 export default function Navbar() {
-  const [isProgramOpen, setIsProgramOpen] = useState(false);
   //當網頁在瀏覽器開機（Mounted）後，next-themes 會跑去偵測瀏覽器底層的 window.matchMedia('(prefers-color-scheme: dark)')。
   const { resolvedTheme, setTheme } = useTheme();
   const pathname = usePathname();
@@ -43,20 +31,8 @@ export default function Navbar() {
 
   const isDarkMode = mounted && resolvedTheme === "dark";
 
-  const handleLinkClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-  };
-
   return (
-    <div
-      className={styles.nav}
-      onMouseLeave={() => setIsProgramOpen(false)}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          setIsProgramOpen(false);
-        }
-      }}
-    >
+    <div className={styles.nav}>
       <div className={styles.wrap}>
         <Link href="/">
           <img
@@ -160,15 +136,6 @@ export default function Navbar() {
               ></path>
             </svg>
           </a>
-        </div>
-      </div>
-      <div className={`${styles.subnav} ${isProgramOpen ? styles.open : ""}`}>
-        <div className={styles.subnavWrap}>
-          {programLinks.map((link) => (
-            <Link href="#" key={link} onClick={handleLinkClick}>
-              {link}
-            </Link>
-          ))}
         </div>
       </div>
     </div>
