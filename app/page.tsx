@@ -12,7 +12,6 @@ import type {
   PlaylistItemsResponse,
   PlaylistVideoItem,
   PlaylistEntry,
-  ProgramListResponse,
   CongressLiveResponse,
   CongressLiveItem,
 } from "./_interfaces/playlist";
@@ -147,13 +146,6 @@ export default function Home() {
     return data;
   }
 
-  // 抓節目清單（節目區專用，扁平 items）
-  async function fetchProgramList() {
-    const res = await fetch(`${basePath}/playlist-list/program`);
-    const data: ProgramListResponse = await res.json();
-    return data;
-  }
-
   // 取得某份清單的影片項目
   async function fetchPlaylistItems(apiUrl: string) {
     const res = await fetch(apiUrl);
@@ -222,8 +214,22 @@ export default function Home() {
     );
   }
 
+  // 節目卡：每份清單用首支影片當封面
+  async function fetchProgramCards(entries: PlaylistEntry[]) {
+    return Promise.all(
+      entries.map(async (entry) => {
+        const items = await fetchPlaylistItems(entry.apiUrl);
+        return {
+          ...entry,
+          thumbnailUrl: items[0]?.thumbnailUrl,
+          watchUrl: items[0]?.watchUrl,
+        };
+      }),
+    );
+  }
+
   useEffect(() => {
-    // 抓一次播放清單列表，供「影音精選」「話題」「短影音」「國會直播」各區使用
+    // 首頁所有區塊都由這一支 playlist-list/home 派生，不再各自打自己的清單 API
     fetchPlaylistList().then((listData) => {
       // 影音精選：取 main 區塊的第一份清單
       const featured = listData.sections.main?.items[0];
@@ -244,6 +250,15 @@ export default function Home() {
         fetchShortsVideos(shortsEntry.apiUrl).then(setShorts);
       }
 
+      // 節目：取 program 區塊的所有清單（內容與 playlist-list/program 相同，不必再打一次）
+      const programSection = listData.sections.program;
+      if (programSection) {
+        if (programSection.title) {
+          setProgramTitle(programSection.title);
+        }
+        fetchProgramCards(programSection.items ?? []).then(setProgramCards);
+      }
+
       // 國會直播：取 congress 區塊的第一份清單，依其 apiUrl 抓議程資料
       const congressEntry = listData.sections.congress?.items[0];
       if (congressEntry) {
@@ -260,24 +275,6 @@ export default function Home() {
           setActiveAgenda(firstLive >= 0 ? firstLive : 0);
         });
       }
-    });
-
-    // 節目：改用 playlist-list/program，每份清單用首支影片當封面
-    fetchProgramList().then((programData) => {
-      if (programData.title) {
-        setProgramTitle(programData.title);
-      }
-      const programEntries = programData.items ?? [];
-      Promise.all(
-        programEntries.map(async (entry) => {
-          const items = await fetchPlaylistItems(entry.apiUrl);
-          return {
-            ...entry,
-            thumbnailUrl: items[0]?.thumbnailUrl,
-            watchUrl: items[0]?.watchUrl,
-          };
-        }),
-      ).then(setProgramCards);
     });
   }, []);
 
