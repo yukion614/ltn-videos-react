@@ -84,6 +84,12 @@ export default function VideoPlayer({
   const wrapperRef = useRef<HTMLDivElement | null>(null); // 播放器外框，全螢幕的目標元素
   // 非原生 HLS 瀏覽器（Chrome/Firefox/Android）用的 hls.js 實例，切換來源／卸載時要銷毀
   const hlsRef = useRef<{ destroy: () => void } | null>(null);
+  // 已經掛到 <video> 上的來源。用來擋掉「同一個 src 重複指派」——
+  // React Strict Mode（next dev 預設開啟）會把 effect 跑兩次（掛載 → 清理 → 再掛載），
+  // 而下方 cleanup 只銷毀 hls.js 實例、無法還原原生的 video.src，
+  // 於是 video.src 會被連續設兩次（實測相隔 1ms），第一次載入被中止並重新載入，畫面閃一下。
+  // ref 在 Strict Mode 的重掛載之間會保留，第二次就會跳過重設；真正卸載時 ref 自然消失。
+  const attachedSrcRef = useRef<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false); // 是否處於全螢幕
   const isMobile = useIsMobile(); // 手機版：volume 屬性在 iOS 唯讀，音量滑桿無效，只留靜音鍵
   // 播放一段時間後自動隱藏標題與控制列（AUTO_HIDE_MS）；點擊播放器再次顯示
@@ -124,15 +130,6 @@ export default function VideoPlayer({
     };
   }, [isPlaying, hasStarted]);
 
-  // 把來源掛到底層 <video> 並嘗試自動播放。
-  //
-  // 【為什麼不用 react-player】react-player v3 只要看到 .m3u8 就一律走 hls.js
-  // 的 lazy chunk（hls-video-element），連原生支援 HLS 的 iOS 也是。那個 chunk 在
-  // iOS 首次造訪常載入失敗／卡住，外層 Suspense 又沒有 error boundary，導致 <video>
-  // 永遠不建立 → 黑畫面，重整（chunk 進快取）才好。這裡改成自己掛來源：
-  //  - iOS / Safari：原生支援 HLS，直接 video.src = m3u8，不需要 hls.js。
-  //  - Chrome / Firefox / Android：原生不支援 → 動態載入 hls.js 接上。
-  // 靜音自動播放被瀏覽器擋下時，切回暫停狀態露出可點的播放鍵（點擊必成功）。
   useEffect(() => {
     const video = mediaRef.current;
     if (!video || !src || previewActive) return;
@@ -153,10 +150,19 @@ export default function VideoPlayer({
       }
     };
 
-    if (!isHlsSource(src) || canPlayNativeHls()) {
-      // 一般 mp4 或原生支援 HLS 的瀏覽器：直接設 src
-      video.src = src;
+    // 把來源直接掛到 <video>（一般 mp4 / 原生支援 HLS 的瀏覽器）。
+    // 同一個 src 只掛一次：重複指派 video.src 會中止前一次載入並重新載入，畫面閃一下。
+    // 見 attachedSrcRef 的說明（Strict Mode 會讓這個 effect 跑兩次）。
+    const attachNativeSrc = () => {
+      if (attachedSrcRef.current !== src) {
+        video.src = src;
+        attachedSrcRef.current = src;
+      }
       tryAutoplay();
+    };
+
+    if (!isHlsSource(src) || canPlayNativeHls()) {
+      attachNativeSrc();
     } else {
       // 非原生 HLS：動態載入 hls.js 接上（此路徑不會在 iOS 執行）
       import("hls.js")
@@ -170,8 +176,7 @@ export default function VideoPlayer({
             hls.on(Hls.Events.MANIFEST_PARSED, tryAutoplay);
           } else {
             // 極少數：既不原生支援也不支援 hls.js，仍試著直接餵 src
-            video.src = src;
-            tryAutoplay();
+            attachNativeSrc();
           }
         })
         .catch(() => {
@@ -323,7 +328,10 @@ export default function VideoPlayer({
     const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
     // 預覽框寬 160px：夾在進度條範圍內，避免超出被播放器 overflow 裁掉
     const half = SPRITE_TILE_W / 2;
-    const left = Math.min(rect.width - half, Math.max(half, ratio * rect.width));
+    const left = Math.min(
+      rect.width - half,
+      Math.max(half, ratio * rect.width),
+    );
     setSeekPreview({ time: ratio * duration, left });
   }
 
