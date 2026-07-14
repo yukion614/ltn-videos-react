@@ -12,18 +12,6 @@
   margin-bottom: 30px;
 }
 
-.playIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  svg {
-    width: 22px;
-    height: 22px;
-    fill: var(--color-brand-gold); // 金色播放鍵
-  }
-}
-
 .links {
   display: flex;
   flex-wrap: wrap;

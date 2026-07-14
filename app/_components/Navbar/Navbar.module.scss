@@ -36,66 +36,6 @@
   }
 }
 
-.utilityBar {
-  width: 100%;
-  border-bottom: 1px solid #e6e6ea;
-  background: #fff;
-  color: #333;
-}
-
-.utilityWrap {
-  display: flex;
-  align-items: center;
-  width: min(100% - var(--container-gutter), var(--container-max));
-  min-height: 44px;
-  margin: 0 auto;
-  gap: 18px;
-}
-
-.utilityLinks {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-
-  a {
-    color: inherit;
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.2;
-    text-decoration: none;
-    white-space: nowrap;
-
-    &:hover,
-    &:focus-visible {
-      color: var(--nav-red);
-    }
-  }
-}
-
-.utilityMeta {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  margin-left: auto;
-  color: #777;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.liveDot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: 6px;
-  border-radius: 999px;
-  background: var(--nav-red);
-  vertical-align: 1px;
-  animation: navBlink 1.5s infinite;
-}
-
 .wrap {
   position: relative;
   display: flex;
@@ -155,12 +95,6 @@
       border-bottom: var(--red) solid 2px;
     }
   }
-}
-
-.programOpen {
-  color: var(--nav-red) !important;
-  border-bottom-color: transparent !important;
-  font-weight: 700 !important;
 }
 
 .navSpacer {
@@ -288,26 +222,6 @@
 }
 
 @media (max-width: 900px) {
-  .utilityWrap {
-    width: 100%;
-    padding: 0 12px;
-  }
-
-  .utilityLinks {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: 18px;
-    scrollbar-width: none;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-  }
-
-  .utilityMeta {
-    display: none;
-  }
-
   .wrap {
     width: 100%;
     padding: 0 12px;
@@ -345,14 +259,6 @@
 }
 
 @media (max-width: 640px) {
-  .utilityWrap {
-    min-height: 38px;
-  }
-
-  .utilityLinks a {
-    font-size: 13px;
-  }
-
   .wrap {
     height: 46px;
   }
@@ -396,16 +302,5 @@
       width: 23px;
       height: 23px;
     }
-  }
-}
-
-@keyframes navBlink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.35;
   }
 }

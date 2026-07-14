@@ -69,26 +69,6 @@
   line-height: 1.4;
 }
 
-.tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-
-  span {
-    display: inline-flex;
-    align-items: center;
-    min-height: 28px;
-    padding: 0 10px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    background: #fff;
-    color: var(--text-2);
-    font-size: 13px;
-    font-weight: 800;
-    line-height: 1;
-  }
-}
-
 .mobileShare {
   display: none;
 }
@@ -178,33 +158,6 @@
   }
 }
 
-.pageNav {
-  display: grid;
-  gap: 10px;
-  max-width: 880px;
-  margin-top: 22px;
-
-  a {
-    display: block;
-    overflow: hidden;
-    padding: 12px 14px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: #fff;
-    color: var(--text);
-    font-size: 14px;
-    font-weight: 800;
-    line-height: 1.45;
-    text-decoration: none;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    &:hover {
-      border-color: rgba(226, 35, 26, 0.35);
-      color: var(--red);
-    }
-  }
-}
 
 .shareRail {
   position: sticky;
@@ -324,21 +277,6 @@
   transform: scale(1.04);
 }
 
-.playBadge {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.68);
-  color: #fff;
-  font-size: 12px;
-  line-height: 1;
-}
-
 // 桌機「看更多」按鈕容器
 .moreWrap {
   display: flex;
@@ -378,12 +316,6 @@
   height: 1px;
 }
 
-.crumbs {
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-}
-
 @media (max-width: 900px) {
   .detailGrid {
     grid-template-columns: 1fr;
@@ -411,10 +343,6 @@
   .wrap {
     width: min(100% - var(--container-gutter-mobile), var(--container-max));
     padding-top: 12px;
-  }
-
-  .crumbs {
-    font-size: 12px;
   }
 
   .playerSection {
