@@ -1,4 +1,6 @@
-import VideoPlayer from "@/app/_components/VideoPlayer/VideoPlayer";
+// 播放器走 client-only 版（ssr: false）：它的畫面依賴 window 與自動播放結果，
+// 在 server 渲染會先畫出猜錯的一幀、JS 再更正，造成控制列閃動。詳見 VideoPlayerClient。
+import VideoPlayer from "@/app/_components/VideoPlayer/VideoPlayerClient";
 import styles from "@/styles/videopage.module.scss";
 import LiveCrumb from "@/app/_components/Crumb/LiveCrumb";
 import ExpandableContent from "@/app/_components/VideoDetail/ExpandableContent";

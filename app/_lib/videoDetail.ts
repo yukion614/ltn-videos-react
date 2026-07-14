@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
-import type { DocMeta } from "@/app/_lib/useDocumentMeta";
 import type { BrandVideoResponse } from "@/app/_interfaces/BrandVideo";
+import type {
+  VideoListItem,
+  VideoListResponse,
+} from "@/app/_interfaces/videoArticle";
 import type {
   ProgramListResponse,
   PlaylistItemsResponse,
   PlaylistVideoItem,
 } from "@/app/_interfaces/playlist";
-import { API_BASE } from "./api";
+import { API_BASE, LIST_REVALIDATE, VIDEO_REVALIDATE } from "./api";
 
 const basePath = API_BASE;
 
@@ -18,112 +21,23 @@ const basePath = API_BASE;
  */
 export async function getTopicFirstWatchUrl(): Promise<string | null> {
   try {
-    const listRes = await fetch(`${basePath}/playlist-list/topic`);
+    const listRes = await fetch(`${basePath}/playlist-list/topic`, {
+      next: { revalidate: LIST_REVALIDATE },
+    });
     if (!listRes.ok) return null;
     const listData = (await listRes.json()) as ProgramListResponse;
     const apiUrl = listData.items?.[0]?.apiUrl;
     if (!apiUrl) return null;
 
-    const itemsRes = await fetch(apiUrl);
+    const itemsRes = await fetch(apiUrl, {
+      next: { revalidate: LIST_REVALIDATE },
+    });
     if (!itemsRes.ok) return null;
     const itemsData = (await itemsRes.json()) as PlaylistItemsResponse;
     return itemsData.items?.[0]?.watchUrl ?? null;
   } catch {
     return null;
   }
-}
-
-/**
- * 靜態匯出用：列出「話題」區塊所有影片的 slug。
- *
- * 「話題」連結與 topic 影片頁的相關影片都指向 /topic/video/{slug}，
- * 這些 slug 來自 /playlist-list/topic 底下各清單的影片，
- * 不在 /list（最新影片）裡。若 generateStaticParams 只用 getVideoIds()，
- * 這些頁面不會被產生，靜態站上一點就 404。
- *
- * 逐一走訪 topic 各清單收集 watchUrl 的 slug（去重）。
- * maxPages 限制每份清單最多抓幾頁（方案 B 傳 1＝只取最新一頁）；
- * 預設 Infinity＝分頁抓完整份清單（另有 50 頁安全上限防無限迴圈）。
- * 失敗時盡量回傳已取得的部分，不讓單一清單失敗拖垮整個 build。
- */
-export async function getTopicVideoIds(maxPages = Infinity): Promise<string[]> {
-  const slugs = new Set<string>();
-  try {
-    const listRes = await fetch(`${basePath}/playlist-list/topic`);
-    if (!listRes.ok) return [];
-    const listData = (await listRes.json()) as ProgramListResponse;
-
-    for (const entry of listData.items ?? []) {
-      // 各清單以 playlist-items/{key}/{page} 分頁；用清單 id 當 key
-      const key = entry.id != null ? String(entry.id) : entry.key ?? "";
-      if (!key) continue;
-
-      let page: number | null = 1;
-      // guard：50 頁安全上限防無限迴圈；maxPages：方案 B 只抓最新幾頁
-      for (let guard = 0; page != null && guard < 50 && guard < maxPages; guard++) {
-        const { items, nextPage }: PlaylistPage = await getPlaylistPage(
-          key,
-          page,
-        );
-        for (const item of items) {
-          const slug = watchUrlToSlug(item.watchUrl);
-          if (slug) slugs.add(slug);
-        }
-        page = nextPage;
-      }
-    }
-  } catch {
-    // 走到一半失敗就用已收集到的部分
-  }
-  return [...slugs];
-}
-
-/**
- * 靜態匯出用：列出「節目」區塊所有影片的 slug。
- *
- * ※ 目前（方案 B）未接線：programs 詳情頁改成只預先產生 /list 最新影片，
- *   節目清單較舊的影片交給 /video-fallback 即時渲染。保留此函式以便日後
- *   要切回「完整 per-video SEO」時，直接在 generateStaticParams 併回即可。
- *
- * 節目影片頁連到 /programs/{category}/video/{slug}，這些 slug 來自
- * /playlist-list/program 底下各節目清單（playlist-items/{key}/{page}），
- * 多數並不在 /list（最新影片）裡。若 [id] 的 generateStaticParams 只用
- * getVideoIds()，這些頁面在 output:"export" 下不會被產生，靜態站一點就 404
- * （dev 是即時產生所以看起來正常）。
- *
- * 逐一走訪每個節目清單並分頁抓完，收集所有 watchUrl 的 slug（去重）。
- * 失敗時盡量回傳已取得的部分，不讓單一清單失敗拖垮整個 build。
- */
-export async function getProgramVideoIds(): Promise<string[]> {
-  const slugs = new Set<string>();
-  try {
-    const listRes = await fetch(`${basePath}/playlist-list/program`);
-    if (!listRes.ok) return [];
-    const listData = (await listRes.json()) as ProgramListResponse;
-
-    for (const entry of listData.items ?? []) {
-      // playlist-items 以清單 key 分頁；apiUrl 用的是英數 key，優先採用，退回數字 id
-      const key = entry.key || (entry.id != null ? String(entry.id) : "");
-      if (!key) continue;
-
-      let page: number | null = 1;
-      // 安全上限：避免分頁資料異常造成無限迴圈
-      for (let guard = 0; page != null && guard < 50; guard++) {
-        const { items, nextPage }: PlaylistPage = await getPlaylistPage(
-          key,
-          page,
-        );
-        for (const item of items) {
-          const slug = watchUrlToSlug(item.watchUrl);
-          if (slug) slugs.add(slug);
-        }
-        page = nextPage;
-      }
-    }
-  } catch {
-    // 走到一半失敗就用已收集到的部分
-  }
-  return [...slugs];
 }
 
 export const fallbackVideo: BrandVideoResponse["video"] = {
@@ -178,7 +92,11 @@ export async function getPlaylistPage(
   if (!key) return { items: [], nextPage: null };
 
   try {
-    const res = await fetch(`${basePath}/playlist-items/${key}/${page}`);
+    // next.revalidate 只在 server 端生效；此函式也被 client 元件（RelatedVideos
+    // 的分頁載入）呼叫，瀏覽器會忽略這個選項，無副作用。
+    const res = await fetch(`${basePath}/playlist-items/${key}/${page}`, {
+      next: { revalidate: LIST_REVALIDATE },
+    });
     if (!res.ok) return { items: [], nextPage: null };
     const data = (await res.json()) as PlaylistItemsResponse;
     const items = data.items ?? [];
@@ -191,7 +109,9 @@ export async function getPlaylistPage(
 
 export async function getVideo(id: string) {
   try {
-    const res = await fetch(`${basePath}/video/${id}`);
+    const res = await fetch(`${basePath}/video/${id}`, {
+      next: { revalidate: VIDEO_REVALIDATE },
+    });
 
     if (!res.ok) {
       return null;
@@ -204,21 +124,96 @@ export async function getVideo(id: string) {
 }
 
 /**
- * 靜態匯出用：抓取影片清單，回傳所有影片 id（字串）。
- * 給動態路由的 generateStaticParams 預先列出要產生的頁面。
+ * 影片詳情頁的完整資料：影片本身 + 「你還會想看」的第一頁。
+ *
+ * programs / topic / latest 三個影片路由的取數邏輯完全相同，抽出來共用。
+ * 「你還會想看」優先用所屬播放清單（playlist-items 可分頁）；沒有清單或清單抓不到
+ * 內容時（如最新頁的單片，playlist 回空），退回詳情 API 的 related 欄位——
+ * related 是固定一批、沒有分頁，故 nextPage 為 null。
+ *
+ * 找不到影片時回 null，由呼叫端決定 notFound()。
  */
-export async function getVideoIds(): Promise<string[]> {
-  try {
-    const res = await fetch(`${basePath}/list`);
-    if (!res.ok) return [];
-    // 路由 key 為 watchUrl 內的 slug（詳情 API 的 key），不是數字 id
-    const data = (await res.json()) as { items?: { watchUrl?: string }[] };
-    return (data.items ?? [])
-      .map((item) => watchUrlToSlug(item.watchUrl))
-      .filter((slug): slug is string => Boolean(slug));
-  } catch {
-    return [];
+export async function getVideoPageData(id: string) {
+  const data = await getVideo(id);
+  if (!data?.video) return null;
+
+  const playlistKey = data.playlist?.key ?? "";
+  const firstPage = playlistKey
+    ? await getPlaylistPage(playlistKey)
+    : { items: [], nextPage: null };
+
+  let initialItems = firstPage.items.filter(
+    (item) => item.id !== data.video.id,
+  );
+  let initialNextPage = firstPage.nextPage;
+
+  if (initialItems.length === 0) {
+    initialItems = (data.related ?? []).filter(
+      (item) => item.id !== data.video.id,
+    );
+    initialNextPage = null;
   }
+
+  return { data, initialItems, initialNextPage };
+}
+
+/**
+ * 節目分類頁（/programs/[category]）的 server 端初始資料。
+ *
+ * 過去這頁是 client 元件，開啟後才在瀏覽器抓這些資料，爬蟲只看得到空殼。
+ * 改 server 渲染後由這裡一次備齊，HTML 送出時就含影片清單。
+ *
+ * leadHls / leadSprite：列表 API 不含 hlsUrl / spriteUrl，第一則要當播放器用，
+ * 需以其 watchUrl 的 slug 另打詳情補上。抓不到就回空字串，畫面退回顯示縮圖。
+ */
+export interface CategoryPageData {
+  items: VideoListItem[];
+  nextPage: number | null;
+  leadHls: string;
+  leadSprite: string;
+}
+
+export async function getCategoryPageData(
+  category: string,
+): Promise<CategoryPageData> {
+  const empty: CategoryPageData = {
+    items: [],
+    nextPage: null,
+    leadHls: "",
+    leadSprite: "",
+  };
+  if (!category) return empty;
+
+  let items: VideoListItem[] = [];
+  let nextPage: number | null = null;
+
+  try {
+    const res = await fetch(`${basePath}/playlist-items/${category}/1`, {
+      next: { revalidate: LIST_REVALIDATE },
+    });
+    if (!res.ok) return empty;
+
+    const data = (await res.json()) as VideoListResponse;
+    items = data.items ?? [];
+    const hasMore = data.hasMore ?? items.length > 0;
+    nextPage = hasMore ? (data.nextPage ?? 2) : null;
+  } catch {
+    return empty;
+  }
+
+  const leadSlug = items[0]
+    ? watchUrlToSlug(items[0].watchUrl) ?? String(items[0].id)
+    : "";
+  if (!leadSlug) return { items, nextPage, leadHls: "", leadSprite: "" };
+
+  const detail = await getVideo(leadSlug);
+  return {
+    items,
+    nextPage,
+    leadHls: toProxiedHls(detail?.video?.hlsUrl ?? "") ?? "",
+    // sprite 用 CSS background 顯示、不受 CORS 限制，直接用原始網址
+    leadSprite: detail?.video?.spriteUrl ?? "",
+  };
 }
 
 /**
@@ -298,7 +293,10 @@ export function buildVideoMetadata(data: BrandVideoResponse | null): Metadata {
   const video = data?.video ?? fallbackVideo;
 
   const title = seo?.title || video.title || "影片詳細頁 | 自由影音";
-  const description = seo?.description || video.summary || "自由影音影片詳細頁";
+  // 後端沒給描述就不輸出 description / og:description（回 undefined，Next 會整個省略標籤）。
+  // 不塞佔位字串：最新（/list）的影片 seo.description 常是空字串，硬填會讓 FB 分享預覽
+  // 顯示一句沒有意義的話；沒有標籤時 FB 會自行略過該行，比顯示假資訊好。
+  const description = seo?.description || video.summary || undefined;
   const imageUrl = seo?.imageUrl || video.posterUrl;
   const canonicalUrl = seo?.canonicalUrl || video.canonicalUrl;
 
@@ -319,23 +317,5 @@ export function buildVideoMetadata(data: BrandVideoResponse | null): Metadata {
       description,
       images: imageUrl ? [imageUrl] : undefined,
     },
-  };
-}
-
-/**
- * 依影片資料組出 client 端要注入 <head> 的扁平 meta（給 useDocumentMeta 用）。
- * 與 buildVideoMetadata 共用同一套取值 / 後備邏輯，只是攤平成 DocMeta 形狀，
- * 供靜態外殼頁（video-fallback）在瀏覽器補上 SEO / OG 標籤。
- */
-export function buildVideoDocMeta(data: BrandVideoResponse | null): DocMeta {
-  const seo = data?.seo;
-  const video = data?.video ?? fallbackVideo;
-
-  return {
-    title: seo?.title || video.title || "影片詳細頁 | 自由影音",
-    description: seo?.description || video.summary || "自由影音影片詳細頁",
-    imageUrl: seo?.imageUrl || video.posterUrl,
-    canonicalUrl: seo?.canonicalUrl || video.canonicalUrl,
-    ogType: "video.other",
   };
 }
