@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * 讓水平捲動容器可以用滑鼠「按住拖曳」來滑動。
@@ -10,7 +10,12 @@ export function useDragScroll<T extends HTMLElement>() {
   const [isDragging, setIsDragging] = useState(false);
 
   // 用 ref 記錄拖曳狀態，避免事件處理頻繁觸發 re-render
-  const state = useRef({ down: false, moved: false, startX: 0, startScroll: 0 });
+  const state = useRef({
+    down: false,
+    moved: false,
+    startX: 0,
+    startScroll: 0,
+  });
 
   useEffect(() => {
     const el = ref.current;
