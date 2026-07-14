@@ -463,34 +463,22 @@ $nav-h: 160px;
   }
 }
 
-// 視窗較窄：面板改為覆蓋在影片上方，用淡入＋上滑過場
-@media (max-width: 820px) {
-  // 手機版影片充滿舞台高度（移除 760px 上限與 48px 留白），寬度改為滿版
+// 平板以下（≤1024，含 iPad 直向）：資訊與面板改為疊在影片上方，用淡入＋上滑過場。
+// 影片高度填滿舞台（移除 760px 上限與 48px 留白），但仍維持 9:16、左右留黑邊——
+// iPad 畫面接近方形，若比照手機滿版鋪滿，9:16 的影片上下會被裁掉約三成。
+// 真正的「滿版鋪滿」只給 ≤820 的手機（見下一個區塊）。
+@media (max-width: 1024px) {
   .slide {
     --video-h: var(--slide-h);
-    --video-w: 100%;
   }
 
-  // 手機改為滿版鋪滿：寬高都填滿視窗，影片以 cover 裁切。
-  // 不再用 9:16 換算寬度，避免換算出的寬度超過視窗、把彈出面板的圓角擠到畫面外。
-  .viewer {
-    position: relative;
-    width: 100%;
-  }
-
-  .videoCol {
-    width: 100%;
-  }
-
-  .video {
-    width: 100%;
-    aspect-ratio: auto; // 取消 9:16，寬高改由 viewer 決定（影片靠 object-fit:cover 填滿）
-    border-radius: 0; // 滿版貼齊螢幕邊，不留圓角
-  }
-
-  // 手機才顯示浮動分享列
+  // 平板／手機才顯示浮動分享列。
+  // shareRail 是 .slide 的子元素，right 以舞台右緣為基準；影片置中變窄後（平板）
+  // 單純 right:10px 會讓它飄到螢幕最右邊，改為對齊影片右緣往內 10px。
+  // 手機滿版時 --video-w 為 100%，算式化簡後仍是 10px，兩種情境共用一條規則。
   .shareRail {
     display: flex;
+    right: calc(50% - var(--video-w) / 2 + 10px);
   }
 
   // 手機分享鍵縮小一點
@@ -515,10 +503,25 @@ $nav-h: 160px;
     color: #fff;
   }
 
-  // 收合資訊塢疊在影片上，文字改白（標題繼承、摘要另外蓋），加陰影確保可讀
+  // 收合資訊塢疊在影片上，文字改白（標題繼承、摘要另外蓋），加陰影確保可讀。
+  // 桌機是浮在影片左外側（left: max(24px, 50% - 600px)），這裡改為與影片同框並置中：
+  // 影片已置中，資訊塢寬度取 --video-w 再 translateX(-50%) 才會疊在影片上而非飄到左邊。
   .infoDock {
+    left: 50%;
+    right: auto; // 取消原本的 right，避免與 left 互相拉扯
+    transform: translateX(-50%);
+    width: var(--video-w); // 寬度＝影片寬，置中後與影片同框
+    bottom: 3px; // 漸層底貼齊時間軸（.seekBar 可見線 3px）上方
+    padding: 0 12px 10px;
     color: #fff;
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 1) 0%,
+      rgba(0, 0, 0, 0.8) 20%,
+      rgba(0, 0, 0, 0) 100%
+    );
+    pointer-events: none; // 整塊不攔截觸控 → 點擊穿透到下方的時間軸 .seekBar
   }
 
   .dockSummary {
@@ -564,28 +567,41 @@ $nav-h: 160px;
     padding: 24px 24px calc(28px + env(safe-area-inset-bottom));
   }
 
+  // infoDock 整塊 pointer-events: none，這裡救回來讓「更多內容」可點
+  .moreBtn {
+    pointer-events: auto;
+  }
+
   .share {
     display: none;
   }
 }
 
-@media (max-width: 480px) {
-  .infoDock {
-    left: 50%; // 左緣移到中線
-    right: auto; // 取消原本的 right，避免與 left 互相拉扯
-    transform: translateX(-50%); // 往左退回自身一半寬 → 真正水平置中
-    padding: calc(100% - 95%);
-    bottom: 3px; // 漸層底貼齊時間軸（.seekBar 可見線 3px）上方
-    background: linear-gradient(
-      to top,
-      rgba(0, 0, 0, 1) 0%,
-      rgba(0, 0, 0, 0.8) 20%,
-      rgba(0, 0, 0, 0) 100%
-    );
-    width: var(--video-w); // 寬度＝影片寬，置中後與影片同框
-    pointer-events: none; // 整塊不攔截觸控 → 點擊穿透到下方的時間軸 .seekBar
+// 手機（≤820）：影片改為滿版鋪滿，以 cover 裁切填滿整個舞台。
+// 手機畫面本身就接近 9:16，裁切量很小；平板不套這段（見上方 ≤1024 的說明）。
+@media (max-width: 820px) {
+  .slide {
+    --video-w: 100%;
   }
 
+  // 不再用 9:16 換算寬度，避免換算出的寬度超過視窗、把彈出面板的圓角擠到畫面外。
+  .viewer {
+    position: relative;
+    width: 100%;
+  }
+
+  .videoCol {
+    width: 100%;
+  }
+
+  .video {
+    width: 100%;
+    aspect-ratio: auto; // 取消 9:16，寬高改由 viewer 決定（影片靠 object-fit:cover 填滿）
+    border-radius: 0; // 滿版貼齊螢幕邊，不留圓角
+  }
+}
+
+@media (max-width: 480px) {
   .dockTitle {
     margin: 0 0 8px;
     font-size: var(--font-size-small);
