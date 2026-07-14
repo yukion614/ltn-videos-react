@@ -462,12 +462,17 @@ export default function Home() {
             <div className={styles.parliamentGrid}>
               {/* 直播畫面 */}
               <div className={styles.parliamentPlayer}>
+                {/* congress-live 的 url 是 YouTube embed 網址（youtube.com/embed/xxx，
+                    已帶 autoplay=1&mute=1），不是 HLS／mp4 檔，餵給 <video> 播不出來，
+                    只能用 iframe 嵌入 */}
                 {currentAgenda?.url ? (
-                  <VideoPlayer
+                  <iframe
                     key={currentAgenda.url}
+                    className={styles.parliamentFrame}
                     src={currentAgenda.url}
-                    poster=""
                     title={currentAgenda.name}
+                    allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                    allowFullScreen
                   />
                 ) : (
                   <VideoMedia

@@ -357,6 +357,16 @@
   display: block;
 }
 
+// 國會直播的 YouTube iframe：沿用播放器的 16:9 黑底外框
+.parliamentFrame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: 6px;
+  background: #000;
+}
+
 .liveBadge {
   position: absolute;
   top: 12px;
