@@ -100,8 +100,7 @@ export default function RelatedVideos({
           <Link
             className={styles.recommendCard}
             href={`${videoBasePath}/${watchUrlToSlug(item.watchUrl) ?? item.id}`}
-            // videoBasePath 指向 /topic/video 或 /programs/{category}/video 這類導向
-            // video-fallback 外殼的假路由，沒有靜態 index.txt；關掉 prefetch 避免 404。
+            // 影片頁是 ISR：prefetch 會讓清單上每個連結都在伺服器渲染一次，關掉省成本。
             prefetch={false}
             key={item.id}
           >

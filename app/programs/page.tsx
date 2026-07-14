@@ -151,7 +151,7 @@ export default function ProgramsPage() {
                       section.slug,
                       watchUrlToSlug(video.watchUrl) ?? video.id,
                     )}
-                    // 影片假路由(導向 video-fallback)，沒有靜態 index.txt；關掉 prefetch 避免 404
+                    // 影片頁是 ISR；prefetch 會讓每個連結都在伺服器渲染一次，關掉省成本
                     prefetch={false}
                     key={video.id}
                   >

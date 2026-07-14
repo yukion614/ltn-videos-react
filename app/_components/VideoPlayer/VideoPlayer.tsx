@@ -574,8 +574,7 @@ export default function VideoPlayer({
             // 標題本身就是連結：整塊定位於頂端，點選進入該影片詳情頁
             <Link
               href={titleHref}
-              // titleHref 指向 /programs/{category}/video 這類導向 video-fallback 外殼的
-              // 假路由，沒有靜態 index.txt；關掉 prefetch 避免預抓取打出 404。
+              // titleHref 指向影片詳情頁（ISR）；prefetch 會在伺服器多渲染一次，關掉。
               prefetch={false}
               className={`${styles.mediaTitleTop} ${styles.mediaTitleLink}${hideCls}`}
             >

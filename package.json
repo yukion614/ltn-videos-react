@@ -7,7 +7,6 @@
     "build": "next build",
     "build:embed": "vite build",
     "start": "next start",
-    "serve:static": "node scripts/serve-static.mjs",
     "lint": "next lint"
   },
   "dependencies": {

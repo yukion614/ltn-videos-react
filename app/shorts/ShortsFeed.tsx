@@ -150,8 +150,8 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
   const seekBarRef = useRef<HTMLDivElement | null>(null);
   const seekingRef = useRef(false);
 
-  // 完全 SPA：/shorts/ 這頁會被伺服器拿來服務 /shorts/{id}（見 serve-static.mjs、
-  // nginx.conf 的 fallback）。此時沒有 props initialId，改從網址 /shorts/{slug} 解析目標。
+  // /shorts/{id} 有自己的 server 路由會帶 initialId 進來；直接進 /shorts/ 時沒有，
+  // 就從網址 /shorts/{slug} 自行解析（保險，也讓元件能獨立運作）。
   // 只在掛載時取一次（之後捲動會用 replaceState 改寫網址，不能每次 render 重算，
   // 否則會誤觸下方「首批載入」effect 重抓資料）。
   const [startId] = useState<string | undefined>(
@@ -168,7 +168,7 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
   );
 
   // 網址 /shorts/{id} 指定的那則在整份清單裡都找不到 → 視同無效路由，顯示 404
-  // （對齊 video-fallback / programs 外殼「抓不到內容就顯示 NotFoundPanel」的行為）
+  // （對齊其他頁「抓不到內容就顯示 NotFoundPanel」的行為）
   const [notFound, setNotFound] = useState(false);
 
   const stageRef = useRef<HTMLElement | null>(null);

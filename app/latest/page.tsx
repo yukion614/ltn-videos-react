@@ -45,8 +45,8 @@ export default function LatestPage() {
             {videos.map((video) => (
               <Link
                 href={`/latest/video/${watchUrlToSlug(video.watchUrl) ?? video.id}`}
-                // /latest/video/:id 是導向 video-fallback 外殼的假路由，沒有靜態
-                // index.txt，關掉 prefetch 以免預抓取打出 404（點擊導航照常運作）。
+                // 影片頁是 ISR：prefetch 會讓畫面上每個連結都在伺服器渲染一次，
+                // 列表連結多、成本不划算，關掉（點擊導航照常運作）。
                 prefetch={false}
                 className={styles.card}
                 key={video.id}

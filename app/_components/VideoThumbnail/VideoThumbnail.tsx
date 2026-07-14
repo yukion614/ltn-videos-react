@@ -26,8 +26,8 @@ export default function VideoPlayer({
   return (
     <Link
       href={slug}
-      // slug 多半指向 /topic/video、/programs/{category}/video 這類導向 video-fallback
-      // 外殼的假路由，沒有對應的靜態 index.txt；關掉 prefetch 避免預抓取打出 404。
+      // slug 多半指向影片詳情頁（ISR）；prefetch 會讓每個縮圖連結都在伺服器
+      // 渲染一次，一頁縮圖很多、成本不划算，關掉。
       prefetch={false}
       className={[
         variant === "row" ? styles.topicRow : styles.topicLead,
