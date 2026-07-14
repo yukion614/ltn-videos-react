@@ -70,17 +70,26 @@ export default function Navbar() {
         </Link>
 
         <nav className={styles.navLinks}>
-          {mainLinks.map((link, index) => (
-            <Link
-              href={`/${link.link}`}
-              key={index}
-              className={
-                pathname.includes(`/${link.link}`) ? styles.active : ""
-              }
-            >
-              {link.name}
-            </Link>
-          ))}
+          {mainLinks.map((link, index) => {
+            const className = pathname.includes(`/${link.link}`)
+              ? styles.active
+              : "";
+
+            // 「話題」用原生 <a>，不走 client 端換頁。
+            if (link.link === "topic") {
+              return (
+                <a href={`/${link.link}`} key={index} className={className}>
+                  {link.name}
+                </a>
+              );
+            }
+
+            return (
+              <Link href={`/${link.link}`} key={index} className={className}>
+                {link.name}
+              </Link>
+            );
+          })}
         </nav>
         <span className={styles.navSpacer}></span>
         <div className={styles.navIcons}>
