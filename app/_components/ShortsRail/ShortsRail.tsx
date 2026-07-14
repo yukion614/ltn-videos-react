@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import type { ShortsRailItem } from "@/app/_interfaces/shorts";
 import { useDragScroll } from "@/app/hooks/useDragScroll";
-import { watchUrlToSlug } from "@/app/_lib/videoDetail";
+import { toProxiedHls, watchUrlToSlug } from "@/app/_lib/videoDetail";
 import styles from "./ShortsRail.module.scss";
 
 // react-player v3：以 src 指定來源（v2 的 url 已停用）
@@ -13,15 +13,6 @@ const ReactPlayer = dynamic(() => import("react-player"), {
   ssr: false,
   loading: () => <div className={styles.playerLoading}>載入中</div>,
 });
-
-// 上游只對 *.ltn.com.tw 開 CORS：正式環境直接用原始網址；
-// 本機 dev（localhost）才走 next.config.ts 的同源代理 /hls/*
-function toProxiedHls(url: string) {
-  if (process.env.NODE_ENV === "development") {
-    return url.replace("https://video.ltn.com.tw/media/", "/hls/");
-  }
-  return url;
-}
 
 export default function ShortsRail({ items }: { items: ShortsRailItem[] }) {
   // 只記住目前滑鼠停留的卡片，只有它會載入並播放影片

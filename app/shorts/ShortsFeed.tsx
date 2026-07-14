@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import styles from "./page.module.scss";
 import NotFoundPanel from "@/app/_components/NotFoundPanel/NotFoundPanel";
 import type { ShortsApiItem, ShortsApiResponse } from "../_interfaces/shorts";
-import { watchUrlToSlug } from "../_lib/videoDetail";
+import { toProxiedHls, watchUrlToSlug } from "../_lib/videoDetail";
 import { useDocumentMeta } from "../_lib/useDocumentMeta";
 import { API_BASE } from "../_lib/api";
 
@@ -22,15 +22,6 @@ const ReactPlayer = dynamic(() => import("react-player"), {
 });
 
 const basePath = API_BASE;
-
-// 上游只對 *.ltn.com.tw 開 CORS：正式環境直接用原始網址；
-// 本機 dev（localhost）才走 next.config.ts 的同源代理 /hls/*
-function toProxiedHls(url: string) {
-  if (process.env.NODE_ENV === "development") {
-    return url.replace("https://video.ltn.com.tw/media/", "/hls/");
-  }
-  return url;
-}
 
 async function fetchShorts(
   moreId: number | null = null,
