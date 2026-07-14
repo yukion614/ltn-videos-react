@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { toProxiedHls } from "../../_lib/videoDetail";
 import styles from "./VideoPlayer.module.scss";
 
 // 這個網址是不是 HLS（.m3u8）串流
@@ -135,6 +136,10 @@ export default function VideoPlayer({
     if (!video || !src || previewActive) return;
     let cancelled = false;
 
+    // 掛載前才決定要不要走同源代理：src 可能是 server 端算好的（如節目頁的 leadHls），
+    // 那時還不知道頁面 origin。到這裡已在瀏覽器，能正確判斷。
+    const source = toProxiedHls(src) ?? src;
+
     // iOS 靜音自動播放的前提：play() 前 muted/playsInline 必須已是 true
     video.muted = muted;
     video.playsInline = true;
@@ -154,14 +159,14 @@ export default function VideoPlayer({
     // 同一個 src 只掛一次：重複指派 video.src 會中止前一次載入並重新載入，畫面閃一下。
     // 見 attachedSrcRef 的說明（Strict Mode 會讓這個 effect 跑兩次）。
     const attachNativeSrc = () => {
-      if (attachedSrcRef.current !== src) {
-        video.src = src;
-        attachedSrcRef.current = src;
+      if (attachedSrcRef.current !== source) {
+        video.src = source;
+        attachedSrcRef.current = source;
       }
       tryAutoplay();
     };
 
-    if (!isHlsSource(src) || canPlayNativeHls()) {
+    if (!isHlsSource(source) || canPlayNativeHls()) {
       attachNativeSrc();
     } else {
       // 非原生 HLS：動態載入 hls.js 接上（此路徑不會在 iOS 執行）
@@ -171,7 +176,7 @@ export default function VideoPlayer({
           if (Hls.isSupported()) {
             const hls = new Hls();
             hlsRef.current = hls;
-            hls.loadSource(src);
+            hls.loadSource(source);
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, tryAutoplay);
           } else {

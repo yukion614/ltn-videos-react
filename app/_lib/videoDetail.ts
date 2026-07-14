@@ -216,25 +216,37 @@ export async function getCategoryPageData(
   };
 }
 
+const HLS_UPSTREAM = "https://video.ltn.com.tw/media/";
+
+// 上游是否會對這個網域回應 Access-Control-Allow-Origin（CORS 白名單只含 ltn.com.tw）
+function canReachUpstreamDirectly(hostname: string) {
+  return hostname === "ltn.com.tw" || hostname.endsWith(".ltn.com.tw");
+}
+
 /**
  * 取得可播放的 HLS 網址。
  *
- * 上游 video.ltn.com.tw 只對 *.ltn.com.tw 網域開放 CORS：
- * - 正式 build（部署在 ltn.com.tw 子網域，如 test49.ltn.com.tw）：
- *   上游會回應 Access-Control-Allow-Origin，直接用 API 給的原始網址即可。
- * - 本機 dev（localhost 非 ltn.com.tw）：上游不給 CORS，
- *   改走 next.config.ts 的同源代理 /hls/*。
+ * 上游 video.ltn.com.tw 只對 *.ltn.com.tw 網域開放 CORS，其餘網域一律走
+ * next.config.ts 的同源代理 /hls/*。判斷依據是「目前頁面的網域」而非 NODE_ENV：
+ * 本機 `next start` 是 production build 卻跑在 localhost，用 NODE_ENV 判斷會誤放行、
+ * 播放器直連上游被 CORS 擋掉。
+ *
+ * 伺服器端沒有 origin 可判斷，回傳原始網址（正式站的情形）；瀏覽器端會在真正掛載
+ * 來源前再轉一次（見 VideoPlayer），所以 server 先算好的網址在本機也會被修正。
+ * 已是 /hls/* 的網址再轉一次不會變，重複套用是安全的。
  */
 export function toProxiedHls(url?: string) {
   if (!url) {
     return undefined;
   }
 
-  if (process.env.NODE_ENV === "development") {
-    return url.replace("https://video.ltn.com.tw/media/", "/hls/");
+  if (typeof window === "undefined") {
+    return url;
   }
 
-  return url;
+  return canReachUpstreamDirectly(window.location.hostname)
+    ? url
+    : url.replace(HLS_UPSTREAM, "/hls/");
 }
 
 export interface Crumb {
