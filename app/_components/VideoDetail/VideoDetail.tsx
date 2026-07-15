@@ -15,8 +15,9 @@ import { buildVideoCrumbs } from "@/app/_lib/videoDetail";
 export interface VideoDetailProps {
   data: BrandVideoResponse; // 影片詳情（含 video / share / seo / breadcrumb）
   videoBasePath: string; // 相關影片連結前綴，如 /programs/{category}/video 或 /topic/video
-  initialItems: PlaylistVideoItem[]; // 「你還會想看」第 1 頁（已排除自己）
-  initialNextPage: number | null; // 第 1 頁之後的下一頁頁碼
+  // 「你還會想看」的 related 後備清單（已排除自己）。第 1 頁改由 client 端自己抓，
+  // server 不預帶，避免其他影片標題進到 SSR HTML 影響本頁 SEO；後備只在 fallback 時用。
+  relatedFallback: PlaylistVideoItem[];
   // 影片 slug。build 時預抓的路由（programs / topic）帶入後，client 端會重抓
   // 最新麵包屑覆蓋 build 時烤死的內容；fallback 外殼資料已是 runtime 最新，可省略。
   videoSlug?: string;
@@ -75,8 +76,7 @@ function ShareButton({
 export default function VideoDetail({
   data,
   videoBasePath,
-  initialItems,
-  initialNextPage,
+  relatedFallback,
   videoSlug,
 }: VideoDetailProps) {
   const video = data.video;
@@ -173,8 +173,7 @@ export default function VideoDetail({
             videoBasePath={videoBasePath}
             playlistKey={playlistKey}
             currentVideoId={video.id}
-            initialItems={initialItems}
-            initialNextPage={initialNextPage}
+            relatedFallback={relatedFallback}
           />
         </section>
       </div>

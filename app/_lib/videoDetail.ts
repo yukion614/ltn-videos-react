@@ -124,12 +124,14 @@ export async function getVideo(id: string) {
 }
 
 /**
- * 影片詳情頁的完整資料：影片本身 + 「你還會想看」的第一頁。
+ * 影片詳情頁的完整資料：影片本身 + 「你還會想看」的 related 後備清單。
  *
  * programs / topic / latest 三個影片路由的取數邏輯完全相同，抽出來共用。
- * 「你還會想看」優先用所屬播放清單（playlist-items 可分頁）；沒有清單或清單抓不到
- * 內容時（如最新頁的單片，playlist 回空），退回詳情 API 的 related 欄位——
- * related 是固定一批、沒有分頁，故 nextPage 為 null。
+ *
+ * 「你還會想看」的第一頁改由 client 端（RelatedVideos）自己抓，server 不預帶——
+ * 這樣首屏 HTML 的正文只含本片內容，其他影片的標題不會進到 SSR HTML 影響本頁 SEO。
+ * 這裡只回傳 related 後備：播放清單抓不到內容時（如最新頁的單片，playlist 回空）
+ * 才用得到；它固定一批、沒有分頁，且只在 client 端 fallback 時渲染。
  *
  * 找不到影片時回 null，由呼叫端決定 notFound()。
  */
@@ -137,24 +139,14 @@ export async function getVideoPageData(id: string) {
   const data = await getVideo(id);
   if (!data?.video) return null;
 
-  const playlistKey = data.playlist?.key ?? "";
-  const firstPage = playlistKey
-    ? await getPlaylistPage(playlistKey)
-    : { items: [], nextPage: null };
+  // 有播放清單的影片（topic / programs）由 client 抓 playlist 第 1 頁，用不到 related 後備，
+  // 就不把它序列化進 flight data（否則其他影片標題會出現在檢視原始碼的 <script> 裡）。
+  // 只有沒有播放清單的影片（如最新頁單片）才帶 related 當後備。
+  const relatedFallback = data.playlist?.key
+    ? []
+    : (data.related ?? []).filter((item) => item.id !== data.video.id);
 
-  let initialItems = firstPage.items.filter(
-    (item) => item.id !== data.video.id,
-  );
-  let initialNextPage = firstPage.nextPage;
-
-  if (initialItems.length === 0) {
-    initialItems = (data.related ?? []).filter(
-      (item) => item.id !== data.video.id,
-    );
-    initialNextPage = null;
-  }
-
-  return { data, initialItems, initialNextPage };
+  return { data, relatedFallback };
 }
 
 /**

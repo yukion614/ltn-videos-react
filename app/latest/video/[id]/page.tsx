@@ -47,8 +47,7 @@ export default async function LatestVideoPage({
     <VideoDetail
       data={pageData.data}
       videoBasePath="/latest/video"
-      initialItems={pageData.initialItems}
-      initialNextPage={pageData.initialNextPage}
+      relatedFallback={pageData.relatedFallback}
       videoSlug={id}
     />
   );

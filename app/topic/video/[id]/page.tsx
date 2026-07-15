@@ -37,8 +37,7 @@ export default async function TopicVideoPage({
     <VideoDetail
       data={pageData.data}
       videoBasePath="/topic/video"
-      initialItems={pageData.initialItems}
-      initialNextPage={pageData.initialNextPage}
+      relatedFallback={pageData.relatedFallback}
       videoSlug={id}
     />
   );
