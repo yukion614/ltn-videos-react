@@ -486,9 +486,9 @@ export default function Home() {
                   <iframe
                     key={currentAgenda.url}
                     className={styles.parliamentFrame}
-                    src={currentAgenda.url}
+                    src={`${currentAgenda.url}&fs=1&playsinline=1`}
                     title={currentAgenda.name}
-                    allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                     allowFullScreen
                   />
                 ) : (
