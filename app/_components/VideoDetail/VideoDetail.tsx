@@ -7,7 +7,7 @@ import ExpandableContent from "@/app/_components/VideoDetail/ExpandableContent";
 import RelatedVideos from "@/app/_components/RelatedVideos/RelatedVideos";
 import type { BrandVideoResponse } from "@/app/_interfaces/BrandVideo";
 import type { PlaylistVideoItem } from "@/app/_interfaces/playlist";
-import { buildVideoCrumbs, toProxiedHls } from "@/app/_lib/videoDetail";
+import { buildVideoCrumbs } from "@/app/_lib/videoDetail";
 
 // 影片詳細頁的共用畫面。
 // 兩個 server 路由（programs / topic，build 時預抓）與 client fallback 外殼
@@ -101,7 +101,7 @@ export default function VideoDetail({
         {/* 主要影片 */}
         <section className={styles.playerSection} aria-label="影片播放器">
           <VideoPlayer
-            src={toProxiedHls(video.hlsUrl)}
+            src={video.hlsUrl}
             //poster={video.posterUrl}//想要自動撥放 就不要傳入poster
             poster=""
             spriteUrl={video.spriteUrl}

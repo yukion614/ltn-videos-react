@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import type { ShortsRailItem } from "@/app/_interfaces/shorts";
 import { useDragScroll } from "@/app/hooks/useDragScroll";
-import { toProxiedHls, watchUrlToSlug } from "@/app/_lib/videoDetail";
+import { watchUrlToSlug } from "@/app/_lib/videoDetail";
 import styles from "./ShortsRail.module.scss";
 
 // react-player v3：以 src 指定來源（v2 的 url 已停用）
@@ -62,7 +62,7 @@ export default function ShortsRail({ items }: { items: ShortsRailItem[] }) {
                 {isHovered ? (
                   <ReactPlayer
                     className={styles.player}
-                    src={toProxiedHls(short.hlsUrl)}
+                    src={short.hlsUrl}
                     playing // hover 時自動播放
                     autoPlay // 帶上原生 autoplay：HLS 串流 ready 就自己播，
                     // 不倚賴 react-player 只在掛載時呼叫一次、且會被 manifest 載入 race 掉的 .play()

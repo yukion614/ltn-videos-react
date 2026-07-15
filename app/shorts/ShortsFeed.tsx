@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import styles from "./page.module.scss";
 import NotFoundPanel from "@/app/_components/NotFoundPanel/NotFoundPanel";
 import type { ShortsApiItem, ShortsApiResponse } from "../_interfaces/shorts";
-import { toProxiedHls, watchUrlToSlug } from "../_lib/videoDetail";
+import { watchUrlToSlug } from "../_lib/videoDetail";
 import { useDocumentMeta } from "../_lib/useDocumentMeta";
 import { API_BASE } from "../_lib/api";
 
@@ -430,7 +430,7 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
                         <ReactPlayer
                           ref={playerRef}
                           className={styles.player}
-                          src={toProxiedHls(short.hlsUrl)}
+                          src={short.hlsUrl}
                           playing={playing}
                           muted={muted}
                           loop

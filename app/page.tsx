@@ -15,7 +15,7 @@ import type {
   CongressLiveResponse,
   CongressLiveItem,
 } from "./_interfaces/playlist";
-import { toProxiedHls, watchUrlToSlug } from "./_lib/videoDetail";
+import { watchUrlToSlug } from "./_lib/videoDetail";
 import { API_BASE } from "./_lib/api";
 import { useIsMobile } from "./hooks/useIsMobile";
 
@@ -167,9 +167,7 @@ export default function Home() {
 
         return {
           ...item,
-          // 上游只對 *.ltn.com.tw 開 CORS：正式環境直接用原始網址；
-          // 本機 dev 才換成同源 proxy 路徑（對應 next.config 的 /hls rewrite）
-          hlsUrl: toProxiedHls(rawHlsUrl) ?? "",
+          hlsUrl: rawHlsUrl,
           // sprite 縮圖是用 CSS background 顯示（非 fetch），不受 CORS 限制，直接用原始網址
           spriteUrl: detailData?.video?.spriteUrl ?? "",
         };

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useIsMobile } from "../../hooks/useIsMobile";
-import { toProxiedHls } from "../../_lib/videoDetail";
 import styles from "./VideoPlayer.module.scss";
 
 // 這個網址是不是 HLS（.m3u8）串流
@@ -136,9 +135,7 @@ export default function VideoPlayer({
     if (!video || !src || previewActive) return;
     let cancelled = false;
 
-    // 掛載前才決定要不要走同源代理：src 可能是 server 端算好的（如節目頁的 leadHls），
-    // 那時還不知道頁面 origin。到這裡已在瀏覽器，能正確判斷。
-    const source = toProxiedHls(src) ?? src;
+    const source = src;
 
     // iOS 靜音自動播放的前提：play() 前 muted/playsInline 必須已是 true
     video.muted = muted;

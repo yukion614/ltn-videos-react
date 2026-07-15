@@ -12,22 +12,10 @@ import type { NextConfig } from "next";
 //   動態路由不預先列舉參數，任何影片第一次被請求時即時產生並快取
 //   （見各路由的 `export const revalidate`），一樣不必重 build。
 //
-// rewrites 在 export 下會被整個停用，改回 SSR 後恢復作用，dev 與正式皆生效。
 const config: NextConfig = {
   trailingSlash: true, // 沿用既有網址形狀（結尾斜線），避免 canonical 全數變動
   images: {
     unoptimized: true, // 已全面改用原生 <img>
-  },
-  async rewrites() {
-    return [
-      // HLS 同源代理。上游 video.ltn.com.tw 只對 *.ltn.com.tw 開 CORS，
-      // 本機 dev（localhost）不能直連，需經此代理（見 _lib/videoDetail.ts 的 toProxiedHls）。
-      // 正式站部署在 ltn.com.tw 子網域、CORS 直接通，用不到這條，留著當保險。
-      {
-        source: "/hls/:path*",
-        destination: "https://video.ltn.com.tw/media/:path*",
-      },
-    ];
   },
 };
 
