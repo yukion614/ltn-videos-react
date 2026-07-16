@@ -1,18 +1,93 @@
 "use client";
 
-import { useState } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { ShortsRailItem } from "@/app/_interfaces/shorts";
 import { useDragScroll } from "@/app/hooks/useDragScroll";
 import { watchUrlToSlug } from "@/app/_lib/videoDetail";
 import styles from "./ShortsRail.module.scss";
 
-// react-player v3：以 src 指定來源（v2 的 url 已停用）
-const ReactPlayer = dynamic(() => import("react-player"), {
-  ssr: false,
-  loading: () => <div className={styles.playerLoading}>載入中</div>,
-});
+// 這個網址是不是 HLS（.m3u8）串流
+function isHlsSource(url?: string) {
+  return !!url && /\.m3u8($|\?)/i.test(url);
+}
+
+// 瀏覽器是否原生支援 HLS（iOS / macOS Safari 皆為 true）。
+// 原生支援時直接把 .m3u8 餵給 <video>，不必用 hls.js（hls.js 走 XHR 受 CORS 限制，
+// 直連上游 video.ltn.com.tw 在非 *.ltn.com.tw 網域會被擋）。
+function canPlayNativeHls() {
+  if (typeof document === "undefined") return false;
+  const v = document.createElement("video");
+  return (
+    v.canPlayType("application/vnd.apple.mpegurl") !== "" ||
+    v.canPlayType("application/x-mpegURL") !== ""
+  );
+}
+
+// 首頁短影音 hover 播放器：原生 <video> 取代 react-player（同 ShortsFeed 的做法）。
+// 只有 hover 的卡片會掛載本元件，靜音循環自動播；卸載時銷毀 hls.js 實例。
+function RailVideo({ src }: { src: string }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const hlsRef = useRef<{ destroy: () => void } | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !src) return;
+    let cancelled = false;
+
+    // 靜音自動播放的前提：play() 前 muted/playsInline 必須已是 true
+    video.muted = true;
+    video.playsInline = true;
+
+    const tryPlay = () => {
+      if (cancelled) return;
+      const p = video.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    };
+
+    if (!isHlsSource(src) || canPlayNativeHls()) {
+      // 原生 HLS（Safari）：直接指派 src，原生 media 請求不受 CORS 限制
+      video.src = src;
+      tryPlay();
+    } else {
+      // 其他瀏覽器：用 hls.js 接上
+      import("hls.js")
+        .then(({ default: Hls }) => {
+          if (cancelled) return;
+          if (Hls.isSupported()) {
+            const hls = new Hls();
+            hlsRef.current = hls;
+            hls.loadSource(src);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
+          } else {
+            video.src = src;
+            tryPlay();
+          }
+        })
+        .catch(() => {});
+    }
+
+    return () => {
+      cancelled = true;
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [src]);
+
+  return (
+    <video
+      ref={videoRef}
+      className={styles.player}
+      loop
+      muted
+      autoPlay
+      playsInline
+    />
+  );
+}
 
 export default function ShortsRail({ items }: { items: ShortsRailItem[] }) {
   // 只記住目前滑鼠停留的卡片，只有它會載入並播放影片
@@ -59,21 +134,7 @@ export default function ShortsRail({ items }: { items: ShortsRailItem[] }) {
                   style={{ backgroundImage: `url(${short.posterUrl})` }}
                 />
                 {/* 只有 hover 的卡片才掛載播放器，一次只載一支 */}
-                {isHovered ? (
-                  <ReactPlayer
-                    className={styles.player}
-                    src={short.hlsUrl}
-                    playing // hover 時自動播放
-                    autoPlay // 帶上原生 autoplay：HLS 串流 ready 就自己播，
-                    // 不倚賴 react-player 只在掛載時呼叫一次、且會被 manifest 載入 race 掉的 .play()
-                    muted // 靜音（瀏覽器自動播放的必要條件）
-                    loop // 循環播放
-                    playsInline
-                    controls={false} // 不顯示控制列／時間軸
-                    width="100%"
-                    height="100%"
-                  />
-                ) : null}
+                {isHovered ? <RailVideo src={short.hlsUrl} /> : null}
                 {/* 文字疊在圖片上：底部漸層提升可讀性 */}
                 <div className={styles.caption}>
                   <strong className={styles.title}>{short.title}</strong>

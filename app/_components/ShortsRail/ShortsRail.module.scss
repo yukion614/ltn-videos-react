@@ -63,24 +63,6 @@
         transparent 2px 18px
       );
   }
-
-  :global(.react-player__preview) {
-    border-radius: inherit;
-    background-position: center;
-    background-size: cover;
-  }
-
-  :global(.react-player__shadow) {
-    width: 52px;
-    height: 52px;
-    background: rgba(226, 35, 26, 0.94);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
-  }
-
-  :global(.react-player__play-icon) {
-    border-width: 12px 0 12px 19px;
-    margin-left: 5px;
-  }
 }
 
 .poster {
@@ -91,13 +73,6 @@
   background-size: cover;
 }
 
-.playerLoading {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: #111;
-}
-
 .player {
   position: absolute;
   inset: 0;
@@ -105,18 +80,8 @@
   width: 100%;
   height: 100%;
   background: transparent; // 影片畫面出現前讓底下的封面透出來
-  // HLS 來源時 react-player v3 渲染的是 <hls-video> 自訂元素，真正的 <video> 在 shadow DOM，
-  // 其 object-fit 由 CSS 變數 --media-object-fit 控制（預設 contain → 橫式影片會留黑邊變小）。
-  // 設成 cover 才會以高度填滿外框、左右裁切置中（CSS 變數會繼承進 shadow DOM）。
-  --media-object-fit: cover;
-}
-
-.playerLoading {
-  display: grid;
-  place-items: center;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
+  // 原生 <video> 預設 object-fit: fill 會拉伸變形；設 cover 以高度填滿外框、左右裁切置中
+  object-fit: cover;
 }
 
 // 疊在圖片上的文字區，底部漸層讓白字清楚可讀
