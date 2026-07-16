@@ -1,7 +1,7 @@
 "use client";
 import styles from "./page.module.scss";
 import { useEffect, useState } from "react";
-import VideoPlayer from "./_components/VideoPlayer/VideoPlayer";
+import VideoPlayer from "./_components/VideoPlayer/VideoPlayerClient";
 import VideoThumbnail from "./_components/VideoThumbnail/VideoThumbnail";
 import ShortsRail from "./_components/ShortsRail/ShortsRail";
 import type { ShortsRailItem } from "./_interfaces/shorts";
@@ -357,7 +357,10 @@ export default function Home() {
                     index === leadVideo ? styles.playlistItemActive : ""
                   }`}
                   key={index}
-                  onClick={() => setLeadVideo(index)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setLeadVideo(index);
+                  }}
                 >
                   <div
                     className={styles.media}
