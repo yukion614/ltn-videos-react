@@ -89,9 +89,8 @@ $nav-h: 160px;
   width: 100%;
   height: 100%;
   background: transparent;
-  // HLS 來源時內層 <video> 在 <hls-video> 的 shadow DOM，object-fit 由 --media-object-fit 控制
-  // （預設 contain）。設 cover 才會以高度填滿外框、左右裁切置中。
-  --media-object-fit: cover;
+  // 原生 <video>：以高度填滿外框、左右裁切置中
+  object-fit: cover;
 }
 
 .playerLoading {

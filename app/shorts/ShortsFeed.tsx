@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent, SyntheticEvent } from "react";
-import dynamic from "next/dynamic";
 import styles from "./page.module.scss";
 import NotFoundPanel from "@/app/_components/NotFoundPanel/NotFoundPanel";
 import type { ShortsApiItem, ShortsApiResponse } from "../_interfaces/shorts";
@@ -15,11 +14,120 @@ function itemSlug(item: ShortsApiItem): string {
   return watchUrlToSlug(item.watchUrl) ?? String(item.id);
 }
 
-// react-player v3：以 src 指定來源（v2 的 url 已停用）
-const ReactPlayer = dynamic(() => import("react-player"), {
-  ssr: false,
-  loading: () => <div className={styles.playerLoading}>載入中</div>,
-});
+// 這個網址是不是 HLS（.m3u8）串流
+function isHlsSource(url?: string) {
+  return !!url && /\.m3u8($|\?)/i.test(url);
+}
+
+// 瀏覽器是否原生支援 HLS（iOS / macOS Safari 皆為 true）。
+// 原生支援時直接把 .m3u8 餵給 <video> 即可，不需要 hls.js。
+function canPlayNativeHls() {
+  if (typeof document === "undefined") return false;
+  const v = document.createElement("video");
+  return (
+    v.canPlayType("application/vnd.apple.mpegurl") !== "" ||
+    v.canPlayType("application/x-mpegURL") !== ""
+  );
+}
+
+// 短影音的原生 <video>：來源掛載（iOS 原生 HLS／其他瀏覽器 hls.js）與播放／靜音
+// 都在這裡處理，取代 react-player，避免其 hls lazy chunk 在 iOS 首次載入卡住。
+// 只有目前這則會掛載本元件；切換到別則時整個卸載（cleanup 銷毀 hls.js 實例）。
+function ShortsVideo({
+  src,
+  playing,
+  muted,
+  videoRef,
+  onTimeUpdate,
+}: {
+  src: string;
+  playing: boolean;
+  muted: boolean;
+  videoRef: React.MutableRefObject<HTMLVideoElement | null>;
+  onTimeUpdate: (e: SyntheticEvent<HTMLVideoElement>) => void;
+}) {
+  // 非原生 HLS 瀏覽器（Chrome/Firefox/Android）用的 hls.js 實例，卸載時要銷毀
+  const hlsRef = useRef<{ destroy: () => void } | null>(null);
+
+  // 掛載來源並起播（原生 HLS 直接指派 src，其餘用 hls.js 接上）
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !src) return;
+    let cancelled = false;
+
+    // iOS 靜音自動播放的前提：play() 前 muted/playsInline 必須已是 true
+    video.muted = muted;
+    video.playsInline = true;
+
+    const tryPlay = () => {
+      if (cancelled || !playing) return;
+      const p = video.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    };
+
+    if (!isHlsSource(src) || canPlayNativeHls()) {
+      video.src = src;
+      tryPlay();
+    } else {
+      import("hls.js")
+        .then(({ default: Hls }) => {
+          if (cancelled) return;
+          if (Hls.isSupported()) {
+            const hls = new Hls();
+            hlsRef.current = hls;
+            hls.loadSource(src);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
+          } else {
+            // 極少數：既不原生支援也不支援 hls.js，仍試著直接餵 src
+            video.src = src;
+            tryPlay();
+          }
+        })
+        .catch(() => {});
+    }
+
+    return () => {
+      cancelled = true;
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+    // muted/playing 只作為起播的初始值，變動由下方各自的 effect 同步
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src]);
+
+  // 播放／暫停（使用者點擊影片切換）
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (playing) {
+      const p = video.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [playing, videoRef]);
+
+  // 靜音切換
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) video.muted = muted;
+  }, [muted, videoRef]);
+
+  return (
+    <video
+      ref={videoRef}
+      className={styles.player}
+      loop
+      playsInline
+      autoPlay
+      muted={muted}
+      onTimeUpdate={onTimeUpdate}
+    />
+  );
+}
 
 const basePath = API_BASE;
 
@@ -427,18 +535,11 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
 
                       {/* 只有目前這則掛載播放器 */}
                       {isActive ? (
-                        <ReactPlayer
-                          ref={playerRef}
-                          className={styles.player}
+                        <ShortsVideo
+                          videoRef={playerRef}
                           src={short.hlsUrl}
                           playing={playing}
                           muted={muted}
-                          loop
-                          playsInline
-                          autoPlay
-                          controls={false}
-                          width="100%"
-                          height="100%"
                           onTimeUpdate={handleTimeUpdate}
                         />
                       ) : null}
