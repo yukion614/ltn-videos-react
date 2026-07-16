@@ -22,6 +22,18 @@ function canPlayNativeHls() {
   );
 }
 
+// 本次頁面載入中是否已被使用者互動過（sticky activation）。
+// SPA 站內切頁不會重置，故從首頁互動後進到節目／詳情頁時仍為 true——此時瀏覽器允許
+// 帶聲 autoplay，可直接還原 localStorage 的音量／靜音偏好而不被擋、不閃；
+// 未互動則回 false（進站第一支 hero，帶聲一定被擋），此時才靜音起播避免閃。
+function hasUserEngagement() {
+  if (typeof navigator === "undefined") return false;
+  const ua = (
+    navigator as Navigator & { userActivation?: { hasBeenActive?: boolean } }
+  ).userActivation;
+  return Boolean(ua?.hasBeenActive);
+}
+
 // 播放後多久自動隱藏標題與控制列（毫秒）
 const AUTO_HIDE_MS = 5000;
 
@@ -93,6 +105,10 @@ export default function VideoPlayer({
   const attachedSrcRef = useRef<string | null>(null);
   // 只在第一次掛載時套用一次 localStorage 的音量／靜音偏好，之後尊重使用者當下操作
   const prefsAppliedRef = useRef(false);
+  // 使用者是否按過播放/暫停鍵。初次自動播放完全交給下方 src effect，
+  // isPlaying 同步 effect 只在使用者真的操作後才介入，避免兩個 effect 同時
+  // play() 互相中斷（AbortError）→ catch 把 isPlaying 打成 false → 控制列/標題來回閃。
+  const userToggledRef = useRef(false);
   const [isFullscreen, setIsFullscreen] = useState(false); // 是否處於全螢幕
   const isMobile = useIsMobile(); // 手機版：volume 屬性在 iOS 唯讀，音量滑桿無效，只留靜音鍵
   // 播放一段時間後自動隱藏標題與控制列（AUTO_HIDE_MS）；點擊播放器再次顯示
@@ -140,19 +156,31 @@ export default function VideoPlayer({
 
     const source = src;
 
-    // 第一次掛載時套用 localStorage 記住的音量／靜音偏好，並決定起播的靜音狀態。
-    // 只做一次（prefsAppliedRef）：之後 src 變動不再覆蓋使用者當下的操作，改沿用 state。
+    // 起播的靜音狀態：
+    // - 「初次自動播放」(prefsAppliedRef 尚未設)：套用 localStorage 的音量偏好，靜音狀態則看
+    //   本次頁面是否已被互動過（hasUserEngagement）：
+    //     · 尚未互動（進站第一支 hero）→ 一律靜音。帶聲 autoplay 一定被瀏覽器擋，會走 catch
+    //       靜音重試 → 播放中途被中斷再起 → 控制列/標題閃（無快取時尤甚）。靜音是唯一能無互動
+    //       播放的方式；「有聲」偏好改由下方 effect 於首次互動時還原。
+    //     · 已互動（站內切頁到節目/詳情）→ 直接尊重 prefs.muted，即時吃回 localStorage、不必再點。
+    // - 之後切換影片：已有使用者手勢，尊重當下的 muted 狀態，切了片仍延續聲音。
     // 在 useState 初值讀 localStorage 會讓被 SSR 的首頁 hydration mismatch，故改在此 client-only effect 讀。
-    let startMuted = muted;
+    let startMuted;
     if (!prefsAppliedRef.current) {
       prefsAppliedRef.current = true;
       const prefs = loadPlayerPrefs();
       if (prefs) {
         video.volume = prefs.volume;
         setVolume(prefs.volume);
-        setMuted(prefs.muted);
-        startMuted = prefs.muted;
       }
+      if (prefs && !prefs.muted && hasUserEngagement()) {
+        startMuted = false;
+        setMuted(false);
+      } else {
+        startMuted = true;
+      }
+    } else {
+      startMuted = muted;
     }
 
     // iOS 靜音自動播放的前提：play() 前 muted/playsInline 必須已是 true
@@ -229,8 +257,12 @@ export default function VideoPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src, previewActive]);
 
-  // isPlaying 變動時同步底層 <video>（使用者按播放/暫停鍵）
+  // isPlaying 變動時同步底層 <video>（使用者按播放/暫停鍵）。
+  // 只在使用者真的按過播放/暫停後才介入：初次自動播放由上方 src effect 獨自負責，
+  // 否則兩個 effect 會同時 play() 互相中斷，讓 isPlaying 抖動、控制列/標題閃。
+  // 由 onPlay/onPause 等原生事件帶動的 isPlaying 變化，畫面已反映實際狀態，無需再 play()/pause()。
   useEffect(() => {
+    if (!userToggledRef.current) return;
     const video = mediaRef.current;
     if (!video) return;
     if (isPlaying) {
@@ -242,6 +274,31 @@ export default function VideoPlayer({
       video.pause();
     }
   }, [isPlaying]);
+
+  // 還原「有聲音」偏好：瀏覽器禁止無互動的帶聲 autoplay，故一律靜音起播（見上方 src effect），
+  // 待使用者第一次互動（點擊／觸控／按鍵）時才解除靜音——此時已有手勢，開聲不會被擋、也不會閃。
+  // 音量已在 src effect 套用 prefs.volume；這裡只補「解除靜音」這一步。
+  // 上次偏好本來就是靜音（或沒有偏好）則不掛監聽，維持靜音。
+  useEffect(() => {
+    const prefs = loadPlayerPrefs();
+    if (!prefs || prefs.muted) return;
+    // 已有互動的情況，上方 src effect 已直接以有聲起播，不需再等下一次互動
+    if (hasUserEngagement()) return;
+    const unmuteOnce = () => {
+      if (mediaRef.current) mediaRef.current.muted = false;
+      setMuted(false);
+      cleanup();
+    };
+    const cleanup = () => {
+      document.removeEventListener("pointerdown", unmuteOnce);
+      document.removeEventListener("keydown", unmuteOnce);
+      document.removeEventListener("touchstart", unmuteOnce);
+    };
+    document.addEventListener("pointerdown", unmuteOnce);
+    document.addEventListener("keydown", unmuteOnce);
+    document.addEventListener("touchstart", unmuteOnce);
+    return cleanup;
+  }, []);
 
   // muted / volume 變動時同步底層 <video>
   useEffect(() => {
@@ -463,7 +520,10 @@ export default function VideoPlayer({
           className={`${styles.playToggle} ${
             isPlaying ? styles.playing : styles.paused
           }${hideCls}`}
-          onClick={() => setIsPlaying((prev) => !prev)}
+          onClick={() => {
+            userToggledRef.current = true; // 之後才讓 isPlaying 同步 effect 介入
+            setIsPlaying((prev) => !prev);
+          }}
           aria-label={isPlaying ? "暫停" : "播放"}
         >
           {isPlaying ? (
