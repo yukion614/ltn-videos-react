@@ -99,6 +99,7 @@ export const metadata: Metadata = {
     news_keywords: "自由影音, 自由時報, 自由時報電子報, Liberty Times Net, LTN",
     copyright: "自由時報電子報",
     "dcterms.rightsHolder": "自由時報電子報",
+    "fb:app_id": "140490219413038",
   },
 };
 
