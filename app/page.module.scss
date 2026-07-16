@@ -29,6 +29,19 @@
   min-width: 0;
 }
 
+// 大圖播放器載入中的佔位：與播放器同樣 16:9 黑底，先撐住高度避免 layout shift
+.playerPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .playlist {
   min-height: 0;
   overflow: hidden;
