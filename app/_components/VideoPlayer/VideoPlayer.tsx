@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { loadPlayerPrefs, savePlayerPrefs } from "./playerPrefs";
 import styles from "./VideoPlayer.module.scss";
 
 // 這個網址是不是 HLS（.m3u8）串流
@@ -90,6 +91,8 @@ export default function VideoPlayer({
   // 於是 video.src 會被連續設兩次（實測相隔 1ms），第一次載入被中止並重新載入，畫面閃一下。
   // ref 在 Strict Mode 的重掛載之間會保留，第二次就會跳過重設；真正卸載時 ref 自然消失。
   const attachedSrcRef = useRef<string | null>(null);
+  // 只在第一次掛載時套用一次 localStorage 的音量／靜音偏好，之後尊重使用者當下操作
+  const prefsAppliedRef = useRef(false);
   const [isFullscreen, setIsFullscreen] = useState(false); // 是否處於全螢幕
   const isMobile = useIsMobile(); // 手機版：volume 屬性在 iOS 唯讀，音量滑桿無效，只留靜音鍵
   // 播放一段時間後自動隱藏標題與控制列（AUTO_HIDE_MS）；點擊播放器再次顯示
@@ -137,8 +140,23 @@ export default function VideoPlayer({
 
     const source = src;
 
+    // 第一次掛載時套用 localStorage 記住的音量／靜音偏好，並決定起播的靜音狀態。
+    // 只做一次（prefsAppliedRef）：之後 src 變動不再覆蓋使用者當下的操作，改沿用 state。
+    // 在 useState 初值讀 localStorage 會讓被 SSR 的首頁 hydration mismatch，故改在此 client-only effect 讀。
+    let startMuted = muted;
+    if (!prefsAppliedRef.current) {
+      prefsAppliedRef.current = true;
+      const prefs = loadPlayerPrefs();
+      if (prefs) {
+        video.volume = prefs.volume;
+        setVolume(prefs.volume);
+        setMuted(prefs.muted);
+        startMuted = prefs.muted;
+      }
+    }
+
     // iOS 靜音自動播放的前提：play() 前 muted/playsInline 必須已是 true
-    video.muted = muted;
+    video.muted = startMuted;
     video.playsInline = true;
 
     const tryAutoplay = () => {
@@ -146,8 +164,22 @@ export default function VideoPlayer({
       const p = video.play();
       if (p && typeof p.catch === "function") {
         p.catch(() => {
-          // 自動播放被擋 → 顯示可點的播放鍵讓使用者手動點
-          if (!cancelled) setIsPlaying(false);
+          if (cancelled) return;
+          // 帶聲音自動播放被瀏覽器擋掉 → 退回靜音再播一次，畫面至少會動；
+          // 不改寫 localStorage，使用者「想要聲音」的偏好留著，下次（或互動後）再試。
+          if (!video.muted) {
+            video.muted = true;
+            setMuted(true);
+            const retry = video.play();
+            if (retry && typeof retry.catch === "function") {
+              retry.catch(() => {
+                if (!cancelled) setIsPlaying(false);
+              });
+            }
+          } else {
+            // 靜音仍被擋 → 顯示可點的播放鍵讓使用者手動點
+            setIsPlaying(false);
+          }
         });
       }
     };
@@ -337,11 +369,13 @@ export default function VideoPlayer({
     setSeekPreview({ time: ratio * duration, left });
   }
 
-  // 拖曳音量 → 更新音量，音量 > 0 時自動解除靜音
+  // 拖曳音量 → 更新音量，音量 > 0 時自動解除靜音；並記住偏好
   function handleVolume(e: React.ChangeEvent<HTMLInputElement>) {
     const next = Number(e.target.value);
+    const nextMuted = next === 0;
     setVolume(next);
-    setMuted(next === 0);
+    setMuted(nextMuted);
+    savePlayerPrefs({ volume: next, muted: nextMuted });
   }
 
   // 全螢幕鍵（播放中放控制列、暫停時獨立放右下角，共用同一顆避免重複）
@@ -503,7 +537,13 @@ export default function VideoPlayer({
           <button
             type="button"
             className={styles.muteToggle}
-            onClick={() => setMuted((prev) => !prev)}
+            onClick={() =>
+              setMuted((prev) => {
+                const next = !prev;
+                savePlayerPrefs({ volume, muted: next }); // 記住靜音偏好
+                return next;
+              })
+            }
             aria-label={muted ? "取消靜音" : "靜音"}
           >
             {muted || volume === 0 ? (
