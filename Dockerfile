@@ -3,24 +3,16 @@
 # 本分支未啟用 Next standalone 輸出（next.config.ts 沒有 output:"standalone"，
 # 前端原設計是 EC2 上 `next start`），因此執行階段需要完整 node_modules，
 # 用 `next start` 啟動（不是精簡版 server.js）。
-#
-# HLS 同源代理不需要 build 參數：toProxiedHls()（app/_lib/videoDetail.ts）
-# 已改成瀏覽器端依「目前頁面網址」即時判斷是否要代理，任何網域（本機、
-# *.run.app 測試網址、正式網域）用同一份 image 都能正確播放。
-#
-# 本機測試：
-#   docker build -t ltn-video .
-#   docker run --rm -p 8080:8080 ltn-video
-#   瀏覽器開 http://localhost:8080
-#
+
+# HLS 一律直連上游（video.ltn.com.tw），無同源代理，build 不需相關參數。
+
 # Cloud Run 部署：
-#   gcloud run deploy ltn-video --source . --region asia-east1 --allow-unauthenticated
+# gcloud run deploy ltn-video --source . --region asia-east1 --allow-unauthenticated
 
 # ---- 第一階段：build（完整 Node 工具鏈）----
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# 先只複製 package*.json 再 npm ci：程式碼改動時可沿用已快取的依賴層，加速重建
 # --legacy-peer-deps：react 目前是 19 RC 版，部分套件的 peer 檢查不認預發布版，
 # 不加可能 ERESOLVE 失敗；升到 React 19 正式版後可拿掉
 COPY package.json package-lock.json ./
