@@ -81,6 +81,7 @@ function ProgramFallback({
 
 export default function ProgramsPage() {
   const [sections, setSections] = useState<ProgramSection[]>([]);
+  const [sectionloaded, setSectionloaded] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -91,7 +92,7 @@ export default function ProgramsPage() {
         const res = await fetch(`${basePath}/playlist-list/program`);
 
         if (!res.ok) {
-          return;
+          throw new Error(`playlist-list/program 回應失敗：${res.status}`);
         }
 
         const data: ProgramListResponse = await res.json();
@@ -113,10 +114,12 @@ export default function ProgramsPage() {
 
         if (!ignore) {
           setSections(result);
+          setSectionloaded(true);
         }
       } catch {
         if (!ignore) {
           setSections([]);
+          setSectionloaded(true);
         }
       }
     }
@@ -136,7 +139,12 @@ export default function ProgramsPage() {
 
         <div className={styles.content}>
           {/* 節目清單 */}
-          {sections.map((section, sectionIndex) => (
+          {!sectionloaded ? (
+            <p>載入中...</p>
+          ) : sections.length === 0 ? (
+            <div className={styles.empty}>沒有節目</div>
+          ) : (
+            sections.map((section, sectionIndex) => (
             <section key={section.id ?? section.title}>
               <SectionHeader
                 name={section.title}
@@ -182,7 +190,8 @@ export default function ProgramsPage() {
                 ))}
               </div>
             </section>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </main>
