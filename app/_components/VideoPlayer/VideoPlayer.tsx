@@ -92,7 +92,7 @@ export default function VideoPlayer({
   const [duration, setDuration] = useState(0); // 影片總長度（秒）
   const [muted, setMuted] = useState(true); // 是否靜音（預設 true → 自動播放才會成功）
   const [volume, setVolume] = useState(0.8); // 音量 0~1
-  const [hasStarted, setHasStarted] = useState(false); // 是否已真正開始播放（light 封面點擊前為 false）
+  const [hasStarted, setHasStarted] = useState(false); // 是否已真正開始播放（有封面時，點擊封面播放前為 false）
   const mediaRef = useRef<HTMLVideoElement | null>(null); // 底層 <video> 元素，用來拖曳跳轉
   const wrapperRef = useRef<HTMLDivElement | null>(null); // 播放器外框，全螢幕的目標元素
   // 非原生 HLS 瀏覽器（Chrome/Firefox/Android）用的 hls.js 實例，切換來源／卸載時要銷毀
@@ -103,7 +103,8 @@ export default function VideoPlayer({
   // 於是 video.src 會被連續設兩次（實測相隔 1ms），第一次載入被中止並重新載入，畫面閃一下。
   // ref 在 Strict Mode 的重掛載之間會保留，第二次就會跳過重設；真正卸載時 ref 自然消失。
   const attachedSrcRef = useRef<string | null>(null);
-  // 只在第一次掛載時套用一次 localStorage 的音量／靜音偏好，之後尊重使用者當下操作
+  // 只在第一次掛載時套用一次 localStorage 的音量偏好；靜音狀態另由 hasUserEngagement()
+  // 與下方「首次互動解除靜音」effect 決定，之後尊重使用者當下操作
   const prefsAppliedRef = useRef(false);
   // 使用者是否按過播放/暫停鍵。初次自動播放完全交給下方 src effect，
   // isPlaying 同步 effect 只在使用者真的操作後才介入，避免兩個 effect 同時
@@ -121,7 +122,8 @@ export default function VideoPlayer({
   } | null>(null);
 
   const isSeekable = Number.isFinite(duration) && duration > 0; // 直播 duration 是 Infinity，不顯示進度條
-  // 封面（light）尚未點擊播放前，react-player 會顯示自己的播放鍵；此時隱藏自製控制鍵，避免兩顆按鈕重疊
+  // 有傳封面圖 (poster) 且尚未開始播放時，先顯示封面、隱藏自製控制鍵，避免蓋住封面。
+  // 目前各頁都傳 poster=""，此分支預設不啟用；保留給日後「點封面才播放」的情境。
   const previewActive = Boolean(poster) && !hasStarted;
   // 控制軸顯示時機：
   // - bottom 標題（首頁／詳情）：僅播放中顯示，暫停時讓位給底部標題（維持原行為）
@@ -193,8 +195,8 @@ export default function VideoPlayer({
       if (p && typeof p.catch === "function") {
         p.catch(() => {
           if (cancelled) return;
-          // 帶聲音自動播放被瀏覽器擋掉 → 退回靜音再播一次，畫面至少會動；
-          // 不改寫 localStorage，使用者「想要聲音」的偏好留著，下次（或互動後）再試。
+          // 帶聲音播放被瀏覽器擋掉（已互動偏好有聲、或切換影片時）→ 退回靜音再播一次，
+          // 畫面至少會動；不改寫 localStorage，使用者「想要聲音」的偏好留著，下次再互動時再套用。
           if (!video.muted) {
             video.muted = true;
             setMuted(true);
