@@ -10,6 +10,7 @@ import {
   getPlaylistPage,
   watchUrlToSlug,
 } from "@/app/_lib/videoDetail";
+import VideoThumbnail from "@/app/_components/VideoThumbnail/VideoThumbnail";
 
 // 一次顯示／展開的張數
 const STEP = 8;
@@ -44,9 +45,8 @@ export default function RelatedVideos({
     let cancelled = false;
     (async () => {
       if (playlistKey) {
-        const { items: first, nextPage: np } = await getPlaylistPage(
-          playlistKey,
-        );
+        const { items: first, nextPage: np } =
+          await getPlaylistPage(playlistKey);
         const fresh = first.filter((v) => v.id !== currentVideoId);
         if (cancelled) return;
         if (fresh.length > 0) {
@@ -129,31 +129,21 @@ export default function RelatedVideos({
   return (
     <>
       <div className={styles.recommendGrid}>
-        {shown.map((item) => (
-          <Link
-            className={styles.recommendCard}
-            href={`${videoBasePath}/${watchUrlToSlug(item.watchUrl) ?? item.id}`}
-            // 影片頁是 ISR：prefetch 會讓清單上每個連結都在伺服器渲染一次，關掉省成本。
-            prefetch={false}
-            key={item.id}
-          >
-            <span className={styles.thumb}>
-              <img
+        {shown.length > 0 && ready
+          ? shown.map((item) => (
+              <VideoThumbnail
+                key={item.id}
+                isLoaded={true}
+                variant="stacked"
+                title={item.title}
+                slug={`${videoBasePath}/${watchUrlToSlug(item.watchUrl) ?? item.id}`}
                 src={item.thumbnailUrl || fallbackVideo.posterUrl}
                 alt={item.title}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                }}
               />
-            </span>
-            <strong>{item.title}</strong>
-            <small>{item.publishAt}</small>
-          </Link>
-        ))}
+            ))
+          : Array.from({ length: STEP }).map((_, index) => (
+              <VideoThumbnail key={index} isLoaded={false} variant="stacked" />
+            ))}
       </div>
 
       {/* 手機版：無限滾動哨兵；桌機版：看更多按鈕 */}

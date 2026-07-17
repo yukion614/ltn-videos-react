@@ -147,6 +147,18 @@
   -webkit-line-clamp: 2;
 }
 
+// 載入中骨架：置中疊在灰底縮圖上的提示文字
+.mediaLoading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #3c3c3c;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
 .fallbackMedia {
   position: absolute;
   inset: 0;

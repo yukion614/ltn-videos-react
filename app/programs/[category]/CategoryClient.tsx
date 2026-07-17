@@ -76,6 +76,8 @@ export default function CategoryClient({
     useState<VideoListItem[]>(initialItems);
   const [nextPage, setNextPage] = useState<number | null>(initialNextPage);
   const [loadingMore, setLoadingMore] = useState(false);
+  // 載入更多失敗：保留 nextPage、改顯示「點此重試」，而不是靜默停掉
+  const [loadError, setLoadError] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const fetchingRef = useRef(false);
 
@@ -97,11 +99,13 @@ export default function CategoryClient({
 
       fetchingRef.current = true;
       setLoadingMore(true);
+      setLoadError(false);
 
       try {
         const res = await fetch(`${basePath}/playlist-items/${slug}/${page}`);
         if (!res.ok) {
-          setNextPage(null);
+          // 後端回錯誤不等於「沒有更多」：保留 nextPage，讓使用者可重試
+          setLoadError(true);
           return;
         }
 
@@ -111,7 +115,7 @@ export default function CategoryClient({
         setThumbnailPool((prev) => [...prev, ...items]);
         setNextPage(hasMore ? (data.nextPage ?? page + 1) : null);
       } catch {
-        setNextPage(null);
+        setLoadError(true);
       } finally {
         setLoadingMore(false);
         fetchingRef.current = false;
@@ -121,9 +125,10 @@ export default function CategoryClient({
   );
 
   // 無限滾動：底部 sentinel 進入視窗就再載入一批
+  // （載入失敗時不掛 observer，避免自動重試轟炸後端；改由重試按鈕觸發）
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el || nextPage === null) return;
+    if (!el || nextPage === null || loadError) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -137,7 +142,7 @@ export default function CategoryClient({
     observer.observe(el);
 
     return () => observer.disconnect();
-  }, [fetchPlaylistPage, loadingMore, nextPage]);
+  }, [fetchPlaylistPage, loadError, loadingMore, nextPage]);
 
   // 量測播放器原始位置／尺寸（未固定時），固定時沿用並以等高佔位避免版面跳動
   useEffect(() => {
@@ -262,57 +267,79 @@ export default function CategoryClient({
 
         <div className={styles.content}>
           <section className={styles.feed} aria-label="節目影片列表">
-            {episodes.map((item, index) => {
-              const role = slotRole(index);
+            {episodes.length > 0
+              ? episodes.map((item, index) => {
+                  const role = slotRole(index);
 
-              // 第一則：改用播放器並自動播放；拿不到 hlsUrl 時顯示大圖縮圖
-              if (index === 0) {
-                return (
-                  <div key={item.id} className={styles.big}>
-                    {leadHls ? (
-                      <>
-                        {/* 哨兵：偵測播放器是否滑過視窗頂端（手機版固定用） */}
-                        <div
-                          ref={leadSentinelRef}
-                          className={styles.leadSentinel}
-                          aria-hidden="true"
-                        />
-                        {/* 固定時以等高佔位，避免下方內容往上跳 */}
-                        {leadStuck && leadBox ? (
-                          <div
-                            style={{ height: leadBox.height }}
-                            aria-hidden="true"
-                          />
-                        ) : null}
-                        <div
-                          ref={leadWrapRef}
-                          style={
-                            leadStuck && leadBox
-                              ? {
-                                  position: "fixed",
-                                  top: "var(--navbar-height)",
-                                  left: leadBox.left,
-                                  width: leadBox.width,
-                                  zIndex: 30,
-                                }
-                              : undefined
-                          }
-                        >
-                          <VideoPlayer
-                            src={leadHls}
-                            poster=""
+                  // 第一則：改用播放器並自動播放；拿不到 hlsUrl 時顯示大圖縮圖
+                  if (index === 0) {
+                    return (
+                      <div key={item.id} className={styles.big}>
+                        {leadHls ? (
+                          <>
+                            {/* 哨兵：偵測播放器是否滑過視窗頂端（手機版固定用） */}
+                            <div
+                              ref={leadSentinelRef}
+                              className={styles.leadSentinel}
+                              aria-hidden="true"
+                            />
+                            {/* 固定時以等高佔位，避免下方內容往上跳 */}
+                            {leadStuck && leadBox ? (
+                              <div
+                                style={{ height: leadBox.height }}
+                                aria-hidden="true"
+                              />
+                            ) : null}
+                            <div
+                              ref={leadWrapRef}
+                              style={
+                                leadStuck && leadBox
+                                  ? {
+                                      position: "fixed",
+                                      top: "var(--navbar-height)",
+                                      left: leadBox.left,
+                                      width: leadBox.width,
+                                      zIndex: 30,
+                                    }
+                                  : undefined
+                              }
+                            >
+                              <VideoPlayer
+                                src={leadHls}
+                                poster=""
+                                title={item.title}
+                                titleHref={item.href}
+                                titlePosition="top"
+                                spriteUrl={leadSprite}
+                                allowFullscreen
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <VedoThumbnail
+                            isLoaded={true}
+                            variant="overlay"
+                            fill
                             title={item.title}
-                            titleHref={item.href}
-                            titlePosition="top"
-                            spriteUrl={leadSprite}
-                            allowFullscreen
+                            duration={item.duration}
+                            meta={`${item.date} · ${item.views}`}
+                            slug={item.href}
+                            src={item.thumbnailUrl}
+                            alt={item.title}
                           />
-                        </div>
-                      </>
-                    ) : (
+                        )}
+                      </div>
+                    );
+                  }
+
+                  if (role === "big" || role === "medium") {
+                    return (
                       <VedoThumbnail
+                        key={item.id}
+                        isLoaded={true}
                         variant="overlay"
                         fill
+                        className={role === "big" ? styles.big : styles.medium}
                         title={item.title}
                         duration={item.duration}
                         meta={`${item.date} · ${item.views}`}
@@ -320,49 +347,104 @@ export default function CategoryClient({
                         src={item.thumbnailUrl}
                         alt={item.title}
                       />
-                    )}
-                  </div>
-                );
-              }
+                    );
+                  }
 
-              if (role === "big" || role === "medium") {
+                  return (
+                    <VedoThumbnail
+                      key={item.id}
+                      isLoaded={true}
+                      variant="stacked"
+                      title={item.title}
+                      duration={item.duration}
+                      slug={item.href}
+                      src={item.thumbnailUrl}
+                      alt={item.title}
+                    />
+                  );
+                })
+              : // 查無影片
+                Array.from({ length: 10 }).map((_, index) => {
+                  const role = slotRole(index);
+
+                  // 第一則：
+                  if (index === 0) {
+                    return (
+                      <div key={index} className={styles.big}>
+                        <VedoThumbnail
+                          isLoaded={false}
+                          variant="overlay"
+                          fill
+                        />
+                      </div>
+                    );
+                  }
+
+                  if (role === "big" || role === "medium") {
+                    return (
+                      <VedoThumbnail
+                        key={index}
+                        isLoaded={false}
+                        variant="overlay"
+                        fill
+                        className={role === "big" ? styles.big : styles.medium}
+                      />
+                    );
+                  }
+
+                  return (
+                    <VedoThumbnail
+                      key={index}
+                      isLoaded={false}
+                      variant="stacked"
+                    />
+                  );
+                })}
+
+            {/* 載入更多時，接在清單尾端補幾張 skeleton，慢網速滾到底才不會突然斷掉。*/}
+            {episodes.length > 0 &&
+              loadingMore &&
+              Array.from({ length: 4 }).map((_, i) => {
+                const role = slotRole(episodes.length + i);
+
+                if (role === "big" || role === "medium") {
+                  return (
+                    <VedoThumbnail
+                      key={`skeleton-${i}`}
+                      isLoaded={false}
+                      variant="overlay"
+                      fill
+                      className={role === "big" ? styles.big : styles.medium}
+                    />
+                  );
+                }
+
                 return (
                   <VedoThumbnail
-                    key={item.id}
-                    variant="overlay"
-                    fill
-                    className={role === "big" ? styles.big : styles.medium}
-                    title={item.title}
-                    duration={item.duration}
-                    meta={`${item.date} · ${item.views}`}
-                    slug={item.href}
-                    src={item.thumbnailUrl}
-                    alt={item.title}
+                    key={`skeleton-${i}`}
+                    isLoaded={false}
+                    variant="stacked"
                   />
                 );
-              }
-
-              return (
-                <VedoThumbnail
-                  key={item.id}
-                  variant="stacked"
-                  title={item.title}
-                  duration={item.duration}
-                  slug={item.href}
-                  src={item.thumbnailUrl}
-                  alt={item.title}
-                />
-              );
-            })}
+              })}
           </section>
 
-          {nextPage !== null ? (
-            <div
-              ref={sentinelRef}
-              className={styles.sentinel}
-              aria-hidden="true"
-            />
-          ) : null}
+          {nextPage !== null &&
+            (loadError ? (
+              <button
+                type="button"
+                className={styles.retry}
+                onClick={() => fetchPlaylistPage(nextPage)}
+              >
+                載入失敗，點此重試
+              </button>
+            ) : (
+              <div
+                ref={sentinelRef}
+                className={styles.sentinel}
+                aria-hidden="true"
+              />
+            ))}
         </div>
       </div>
     </main>

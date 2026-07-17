@@ -114,6 +114,27 @@
   height: 1px;
 }
 
+/* 載入更多失敗時的重試按鈕 */
+.retry {
+  align-self: center;
+  padding: 10px 28px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--red);
+    border-color: var(--red);
+  }
+}
+
 .programNotFound {
   width: 100%;
 }

@@ -114,12 +114,9 @@ export default function Home() {
   const [mainVideos, setMainVideos] = useState<VideoListItem[]>([]); //mainVedios
   const [leadVideo, setLeadVideo] = useState<number | 0>(0); //預設第一隻影片
   const [shorts, setShorts] = useState<ShortsRailItem[]>([]); //shorts
-  const [shortsLoaded, setShortsLoaded] = useState(false); //shorts 是否已載入完成
   const [topicVideos, setTopicVideos] = useState<PlaylistVideoItem[]>([]); //話題影片
-  const [topicLoaded, setTopicLoaded] = useState(false); //話題影片是否已載入完成
   const [topicTitle, setTopicTitle] = useState("話題"); //話題標題
   const [programCards, setProgramCards] = useState<ProgramCard[]>([]); //節目
-  const [programLoaded, setProgramLoaded] = useState(false); //節目是否已載入完成
   const [programTitle, setProgramTitle] = useState("節目"); //節目區標題
   const [congress, setCongress] = useState<CongressLiveResponse | null>(null); //國會直播
   const basePath = API_BASE;
@@ -240,22 +237,13 @@ export default function Home() {
       const topicEntry = listData.sections.topic?.items[0];
       if (topicEntry) {
         setTopicTitle(topicEntry.title);
-        fetchPlaylistItems(topicEntry.apiUrl)
-          .then(setTopicVideos)
-          .finally(() => setTopicLoaded(true));
-      } else {
-        setTopicLoaded(true);
+        fetchPlaylistItems(topicEntry.apiUrl).then(setTopicVideos);
       }
 
       // 短影音：取 shorts 區塊的第一份清單
       const shortsEntry = listData.sections.shorts?.items[0];
       if (shortsEntry) {
-        fetchShortsVideos(shortsEntry.apiUrl)
-          .then(setShorts)
-          .finally(() => setShortsLoaded(true));
-      } else {
-        // 沒有 shorts 區塊，視同載入完成（結果為空）
-        setShortsLoaded(true);
+        fetchShortsVideos(shortsEntry.apiUrl).then(setShorts);
       }
 
       // 節目：取 program 區塊的所有清單（內容與 playlist-list/program 相同，不必再打一次）
@@ -264,11 +252,7 @@ export default function Home() {
         if (programSection.title) {
           setProgramTitle(programSection.title);
         }
-        fetchProgramCards(programSection.items ?? [])
-          .then(setProgramCards)
-          .finally(() => setProgramLoaded(true));
-      } else {
-        setProgramLoaded(true);
+        fetchProgramCards(programSection.items ?? []).then(setProgramCards);
       }
 
       // 國會直播：取 congress 區塊的第一份清單，依其 apiUrl 抓議程資料
@@ -390,7 +374,28 @@ export default function Home() {
       </section>
       {/* m版 影音清單 */}
       <section className={` ${styles.mobileList}`} aria-label="最新影音">
-        {mainVideos.map((video, index) => (
+        {mainVideos.length > 0
+          ? mainVideos.map((video, index) => (
+              <div onClick={() => setLeadVideo(index)} key={index}>
+                <VideoThumbnail
+                  isLoaded={true}
+                  variant="stacked"
+                  title={video.title}
+                  src={video.thumbnailUrl}
+                  className={styles.videoThumb}
+                />
+              </div>
+            ))
+          : Array.from({ length: 4 }).map((_, index) => (
+              <div key={index}>
+                <VideoThumbnail
+                  isLoaded={false}
+                  variant="stacked"
+                  className={styles.videoThumb}
+                />
+              </div>
+            ))}
+        {/* {mainVideos.map((video, index) => (
           <div onClick={() => setLeadVideo(index)} key={index}>
             <VideoThumbnail
               variant="stacked"
@@ -399,85 +404,102 @@ export default function Home() {
               className={styles.videoThumb}
             />
           </div>
-        ))}
+        ))} */}
       </section>
       {/* 話題 */}
-      {(!topicLoaded || topicVideos.length > 0) && (
-        <section className={styles.section}>
-          <div className={styles.wrap}>
-            <SectionHeader
-              category="話題"
-              title={topicTitle}
-              // en="Topic"
-              more="更多影片 ›"
-              moreUrl="/topic"
-            />
-            {topicLoaded ? (
-              <div className={styles.topicGrid}>
-                {topicVideos[0] ? (
-                  <VideoThumbnail
-                    variant={"overlay"}
-                    title={topicVideos[0].title}
-                    src={topicVideos[0].thumbnailUrl}
-                    slug={`/topic/video/${watchUrlToSlug(topicVideos[0].watchUrl) ?? topicVideos[0].id}`}
-                    alt={topicVideos[0].title}
-                  />
-                ) : null}
-                <div className={styles.topicList}>
-                  {topicVideos.slice(1, 5).map((video) => (
-                    <VideoThumbnail
-                      key={video.id}
-                      variant={"row"}
-                      title={video.title}
-                      src={video.thumbnailUrl}
-                      slug={`/topic/video/${watchUrlToSlug(video.watchUrl) ?? video.id}`}
-                      alt={video.title}
-                    />
-                  ))}
-                </div>
-              </div>
+
+      <section className={styles.section}>
+        <div className={styles.wrap}>
+          <SectionHeader
+            category="話題"
+            title={topicTitle}
+            // en="Topic"
+            more="更多影片 ›"
+            moreUrl="/topic"
+          />
+
+          <div className={styles.topicGrid}>
+            {topicVideos.length !== 0 ? (
+              <VideoThumbnail
+                isLoaded={true}
+                variant={"overlay"}
+                title={topicVideos[0].title}
+                src={topicVideos[0].thumbnailUrl}
+                slug={`/topic/video/${watchUrlToSlug(topicVideos[0].watchUrl) ?? topicVideos[0].id}`}
+                alt={topicVideos[0].title}
+              />
             ) : (
-              <p>載入中...</p>
+              <VideoThumbnail isLoaded={false} variant={"overlay"} />
             )}
-          </div>
-        </section>
-      )}
-
-      {/*短影音 shorts：載入中顯示提示，載入完但為空則整段隱藏 */}
-      {(!shortsLoaded || shorts.length > 0) && (
-        <section className={styles.section}>
-          <div className={styles.wrap}>
-            <SectionHeader title="短影音" en="Shorts" />
-            {shortsLoaded ? <ShortsRail items={shorts} /> : <p>載入中....</p>}
-          </div>
-        </section>
-      )}
-
-      {/* 節目 */}
-      {(!programLoaded || programCards.length > 0) && (
-        <section className={styles.section}>
-          <div className={styles.wrap}>
-            <SectionHeader title={programTitle} en="Programs" />
-            {programLoaded ? (
-              <div className={styles.programGrid}>
-                {programCards.map((program) => (
+            {topicVideos.length !== 0 ? (
+              <div className={styles.topicList}>
+                {topicVideos.slice(1, 5).map((video) => (
                   <VideoThumbnail
-                    key={program.id}
-                    variant={"overlay"}
-                    title={program.title}
-                    meta={`${program.count} 部影片`}
-                    src={program.thumbnailUrl}
-                    slug={toProgramHref(program.key)}
-                    alt={program.title}
+                    key={video.id}
+                    isLoaded={true}
+                    variant={"row"}
+                    title={video.title}
+                    src={video.thumbnailUrl}
+                    slug={`/topic/video/${watchUrlToSlug(video.watchUrl) ?? video.id}`}
+                    alt={video.title}
                   />
                 ))}
               </div>
             ) : (
-              <p>載入中...</p>
+              <div className={styles.topicList}>
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <VideoThumbnail
+                    key={index}
+                    isLoaded={false}
+                    variant={"row"}
+                  />
+                ))}
+              </div>
             )}
           </div>
-        </section>
-      )}
+        </div>
+      </section>
+
+      {/*短影音 shorts：載入中顯示提示，載入完但為空則整段隱藏 */}
+      <section className={styles.section}>
+        <div className={styles.wrap}>
+          <SectionHeader title="短影音" en="Shorts" />
+          <ShortsRail items={shorts} />
+        </div>
+      </section>
+
+      {/* 節目 */}
+      <section className={styles.section}>
+        <div className={styles.wrap}>
+          <SectionHeader title={programTitle} en="Programs" />
+          {programCards.length > 0 ? (
+            <div className={styles.programGrid}>
+              {programCards.map((program) => (
+                <VideoThumbnail
+                  key={program.id}
+                  isLoaded={true}
+                  variant={"overlay"}
+                  title={program.title}
+                  meta={`${program.count} 部影片`}
+                  src={program.thumbnailUrl}
+                  slug={toProgramHref(program.key)}
+                  alt={program.title}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className={styles.programGrid}>
+              {Array.from({ length: 8 }).map((_, index) => (
+                <VideoThumbnail
+                  key={index}
+                  isLoaded={false}
+                  variant={"overlay"}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* 直播 */}
       {/* <section className={styles.section}>

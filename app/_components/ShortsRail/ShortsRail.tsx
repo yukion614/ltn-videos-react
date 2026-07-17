@@ -101,52 +101,78 @@ export default function ShortsRail({ items }: { items: ShortsRailItem[] }) {
       className={`${styles.shortsRow} ${isDragging ? styles.dragging : ""}`}
       aria-label="短影音清單"
     >
-      {items.map((short, index) => {
-        // 拖曳中暫停 hover 自動播放，避免載入影片卡住滑動
-        const isHovered = !isDragging && hoveredId === short.id;
-        return (
-          <article
-            className={styles.shortCard}
-            key={short.id}
-            onMouseEnter={() => setHoveredId(short.id)}
-            onMouseLeave={() =>
-              setHoveredId((cur) => (cur === short.id ? null : cur))
-            }
-          >
-            {/* 整張卡片是連結，點擊進入 /shorts/{slug} 觀看頁；拖曳時 useDragScroll 會攔截 click 不誤觸。
+      {items.length > 0
+        ? items.map((short, index) => {
+            // 拖曳中暫停 hover 自動播放，避免載入影片卡住滑動
+            const isHovered = !isDragging && hoveredId === short.id;
+            return (
+              <article
+                className={styles.shortCard}
+                key={short.id}
+                onMouseEnter={() => setHoveredId(short.id)}
+                onMouseLeave={() =>
+                  setHoveredId((cur) => (cur === short.id ? null : cur))
+                }
+              >
+                {/* 整張卡片是連結，點擊進入 /shorts/{slug} 觀看頁；拖曳時 useDragScroll 會攔截 click 不誤觸。
                 shorts 頁以 watchUrl 的 slug 比對目標（見 ShortsFeed 的 itemSlug），
                 這裡連結也要用同一種 slug，否則對不上會被判為無效路由顯示 404 */}
-            <Link
-              href={`/shorts/${watchUrlToSlug(short.watchUrl) ?? short.id}`}
-              // /shorts/:id 是靠 rewrite 導回 /shorts 外殼的假路由，沒有對應的靜態
-              // RSC payload（index.txt），開啟預抓取會對不存在的檔案發出 404。點擊導航
-              // 不受影響，這裡關掉 prefetch 純粹避免 console 噴一整排 404。
-              prefetch={false}
-              className={styles.cardLink}
-              draggable={false}
-            >
+                <Link
+                  href={`/shorts/${watchUrlToSlug(short.watchUrl) ?? short.id}`}
+                  // /shorts/:id 是靠 rewrite 導回 /shorts 外殼的假路由，沒有對應的靜態
+                  // RSC payload（index.txt），開啟預抓取會對不存在的檔案發出 404。點擊導航
+                  // 不受影響，這裡關掉 prefetch 純粹避免 console 噴一整排 404。
+                  prefetch={false}
+                  className={styles.cardLink}
+                  draggable={false}
+                >
+                  <div
+                    className={`${styles.shortMedia} ${styles[`tone${index % 8}`]}`}
+                  >
+                    {/* 封面墊底：影片載入前或失敗時都能看到圖，不會黑屏 */}
+                    <div
+                      className={styles.poster}
+                      style={{ backgroundImage: `url(${short.posterUrl})` }}
+                    />
+                    {/* 只有 hover 的卡片才掛載播放器，一次只載一支 */}
+                    {isHovered ? <RailVideo src={short.hlsUrl} /> : null}
+                    {/* 文字疊在圖片上：底部漸層提升可讀性 */}
+                    <div className={styles.caption}>
+                      <strong className={styles.title}>{short.title}</strong>
+                      <small className={styles.views}>
+                        {short.views ?? short.publishAt}
+                      </small>
+                    </div>
+                  </div>
+                </Link>
+              </article>
+            );
+          })
+        : Array.from({ length: 10 }).map((_, index) => (
+            <article className={styles.shortCard} key={index}>
               <div
                 className={`${styles.shortMedia} ${styles[`tone${index % 8}`]}`}
               >
-                {/* 封面墊底：影片載入前或失敗時都能看到圖，不會黑屏 */}
                 <div
                   className={styles.poster}
-                  style={{ backgroundImage: `url(${short.posterUrl})` }}
+                  style={{ backgroundColor: "#ADADAD" }}
                 />
-                {/* 只有 hover 的卡片才掛載播放器，一次只載一支 */}
-                {isHovered ? <RailVideo src={short.hlsUrl} /> : null}
                 {/* 文字疊在圖片上：底部漸層提升可讀性 */}
-                <div className={styles.caption}>
-                  <strong className={styles.title}>{short.title}</strong>
-                  <small className={styles.views}>
-                    {short.views ?? short.publishAt}
-                  </small>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "absolute",
+                    inset: 0,
+                    padding: "8px",
+                  }}
+                >
+                  <strong style={{ color: "#3C3C3C" }}>載入中...</strong>
                 </div>
               </div>
-            </Link>
-          </article>
-        );
-      })}
+            </article>
+          ))}
     </div>
   );
 }

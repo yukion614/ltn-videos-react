@@ -2,6 +2,7 @@ import styles from "./VideoThumbnail.module.scss";
 import Link from "next/link";
 
 export default function VideoPlayer({
+  isLoaded = false,
   variant = "overlay",
   title,
   duration,
@@ -12,8 +13,9 @@ export default function VideoPlayer({
   fill = false,
   className,
 }: {
+  isLoaded: boolean;
   variant: "overlay" | "stacked" | "row";
-  title: string;
+  title?: string;
   duration?: string;
   meta?: string;
   slug?: string; //網址連結
@@ -38,33 +40,54 @@ export default function VideoPlayer({
         .join(" ")}
     >
       <div className={variant === "overlay" ? styles.Image : styles.topicMini}>
-        <img
-          src={src}
-          alt={alt}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-          }}
-        />
+        {isLoaded ? (
+          <img
+            src={src}
+            alt={alt}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              width: "100%",
+              height: "100%",
+              backgroundColor: "#D0D0D0",
+            }}
+          >
+            載入中...
+          </div>
+        )}
+
         {duration ? <span className={styles.duration}>{duration}</span> : null}
         {variant === "overlay" && (title || meta) && (
           <>
-            <span className={styles.gradient} aria-hidden="true" />
+            {isLoaded ? (
+              <span className={styles.gradient} aria-hidden="true" />
+            ) : null}
+
             <span className={styles.overlayContent}>
-              {title ? (
+              {isLoaded && title ? (
                 <span className={styles.mediaTitle}>{title}</span>
               ) : null}
-              {meta ? <span className={styles.meta}>{meta}</span> : null}
+              {isLoaded && meta ? (
+                <span className={styles.meta}>{meta}</span>
+              ) : null}
             </span>
           </>
         )}
       </div>
-      {title && variant !== "overlay" && (
+      {isLoaded && title && variant !== "overlay" ? (
         <strong className={styles.topicTitle}>{title}</strong>
-      )}
+      ) : null}
     </Link>
   );
 }

@@ -81,7 +81,6 @@ function ProgramFallback({
 
 export default function ProgramsPage() {
   const [sections, setSections] = useState<ProgramSection[]>([]);
-  const [sectionloaded, setSectionloaded] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -114,12 +113,10 @@ export default function ProgramsPage() {
 
         if (!ignore) {
           setSections(result);
-          setSectionloaded(true);
         }
       } catch {
         if (!ignore) {
           setSections([]);
-          setSectionloaded(true);
         }
       }
     }
@@ -139,59 +136,75 @@ export default function ProgramsPage() {
 
         <div className={styles.content}>
           {/* 節目清單 */}
-          {!sectionloaded ? (
-            <p>載入中...</p>
-          ) : sections.length === 0 ? (
-            <div className={styles.empty}>沒有節目</div>
-          ) : (
-            sections.map((section, sectionIndex) => (
-            <section key={section.id ?? section.title}>
-              <SectionHeader
-                name={section.title}
-                href={toProgramHref(section.slug)}
-              />
-              {/* 前四支影片 */}
-              <div className={styles.grid}>
-                {section.videos.map((video, cardIndex) => (
-                  <Link
-                    className={styles.card}
-                    href={toVideoHref(
-                      section.slug,
-                      watchUrlToSlug(video.watchUrl) ?? video.id,
-                    )}
-                    // 影片頁是 ISR；prefetch 會讓每個連結都在伺服器渲染一次，關掉省成本
-                    prefetch={false}
-                    key={video.id}
-                  >
-                    <span className={styles.media}>
-                      {video.thumbnailUrl ? (
-                        <img
-                          src={video.thumbnailUrl}
-                          alt={video.title}
-                          style={{
-                            position: "absolute",
-                            inset: 0,
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                          }}
-                        />
-                      ) : (
-                        <ProgramFallback
-                          programName={section.title}
-                          tone={sectionIndex + cardIndex}
-                        />
-                      )}
-                    </span>
-                    <span className={styles.cardTitleWrap}>
-                      <span className={styles.cardTitle}>{video.title}</span>
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-            ))
-          )}
+          {sections.length > 0
+            ? sections.map((section, sectionIndex) => (
+                <section key={section.id ?? section.title}>
+                  <SectionHeader
+                    name={section.title}
+                    href={toProgramHref(section.slug)}
+                  />
+                  {/* 前四支影片 */}
+                  <div className={styles.grid}>
+                    {section.videos.map((video, cardIndex) => (
+                      <Link
+                        className={styles.card}
+                        href={toVideoHref(
+                          section.slug,
+                          watchUrlToSlug(video.watchUrl) ?? video.id,
+                        )}
+                        // 影片頁是 ISR；prefetch 會讓每個連結都在伺服器渲染一次，關掉省成本
+                        prefetch={false}
+                        key={video.id}
+                      >
+                        <span className={styles.media}>
+                          {video.thumbnailUrl ? (
+                            <img
+                              src={video.thumbnailUrl}
+                              alt={video.title}
+                              style={{
+                                position: "absolute",
+                                inset: 0,
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          ) : (
+                            <ProgramFallback
+                              programName={section.title}
+                              tone={sectionIndex + cardIndex}
+                            />
+                          )}
+                        </span>
+                        <span className={styles.cardTitleWrap}>
+                          <span className={styles.cardTitle}>
+                            {video.title}
+                          </span>
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              ))
+            : // 載入中骨架：8 個節目區塊，每塊 4 張灰底卡片
+              Array.from({ length: 8 }).map((_, sectionIndex) => (
+                <section key={sectionIndex}>
+                  <SectionHeader name="" href="#" />
+                  {/* 前四支影片 */}
+                  <div className={styles.grid}>
+                    {Array.from({ length: 4 }).map((_, cardIndex) => (
+                      <span className={styles.card} key={cardIndex}>
+                        <span className={styles.media}>
+                          <span className={styles.mediaLoading}>載入中…</span>
+                        </span>
+                        <span className={styles.cardTitleWrap}>
+                          <span className={styles.cardTitle}>&nbsp;</span>
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </section>
+              ))}
         </div>
       </div>
     </main>

@@ -6,6 +6,7 @@ import Crumb from "../_components/Crumb/Crumb";
 import { useInfiniteVideos } from "../hooks/useInfiniteVideos";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { watchUrlToSlug } from "../_lib/videoDetail";
+import VideoThumbnail from "../_components/VideoThumbnail/VideoThumbnail";
 
 const crumbs = [
   {
@@ -35,44 +36,26 @@ export default function LatestPage() {
           <h1 className={styles.title}>最新</h1>
           <span className={styles.en}>Latest</span>
         </header>
-
-        {loading ? (
-          <p className={styles.status}>載入中…</p>
-        ) : videos.length === 0 ? (
-          <p className={styles.status}>目前沒有影片</p>
-        ) : (
-          <div className={styles.grid}>
-            {videos.map((video) => (
-              <Link
-                href={`/latest/video/${watchUrlToSlug(video.watchUrl) ?? video.id}`}
-                // 影片頁是 ISR：prefetch 會讓畫面上每個連結都在伺服器渲染一次，
-                // 列表連結多、成本不划算，關掉（點擊導航照常運作）。
-                prefetch={false}
-                className={styles.card}
-                key={video.id}
-              >
-                <div className={styles.media}>
-                  <img
+        <div className={styles.grid}>
+          {videos.length > 0
+            ? videos.map((video) => (
+                <div key={video.id}>
+                  <VideoThumbnail
+                    isLoaded={true}
+                    variant="stacked"
+                    title={video.title}
                     src={video.thumbnailUrl}
+                    slug={`/latest/video/${watchUrlToSlug(video.watchUrl) ?? video.id}`}
                     alt={video.title}
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
                   />
                 </div>
-                <div className={styles.info}>
-                  <strong className={styles.cardTitle}>{video.title}</strong>
-                  <small className={styles.date}>{video.publishAt}</small>
+              ))
+            : Array.from({ length: 12 }).map((_, index) => (
+                <div key={index}>
+                  <VideoThumbnail isLoaded={false} variant="stacked" />
                 </div>
-              </Link>
-            ))}
-          </div>
-        )}
-
+              ))}
+        </div>
         {/* 還有下一頁時：手機版掛哨兵自動載入，桌機版顯示「看更多」按鈕 */}
         {!loading &&
           nextPage !== null &&
