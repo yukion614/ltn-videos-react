@@ -37,12 +37,14 @@ function ShortsVideo({
   src,
   playing,
   muted,
+  setMuted,
   videoRef,
   onTimeUpdate,
 }: {
   src: string;
   playing: boolean;
   muted: boolean;
+  setMuted: (m: boolean) => void;
   videoRef: React.MutableRefObject<HTMLVideoElement | null>;
   onTimeUpdate: (e: SyntheticEvent<HTMLVideoElement>) => void;
 }) {
@@ -59,14 +61,31 @@ function ShortsVideo({
     video.muted = muted;
     video.playsInline = true;
 
+    // 起播：帶聲 autoplay 被 iOS 擋掉時，退回靜音再播一次，確保換到下一則一定會動。
+    // （原本只 catch 吞掉錯誤，使用者一旦開過聲音，之後每則都因帶聲被擋而停在封面。）
     const tryPlay = () => {
       if (cancelled || !playing) return;
       const p = video.play();
-      if (p && typeof p.catch === "function") p.catch(() => {});
+      if (p && typeof p.catch === "function") {
+        p.catch(() => {
+          if (cancelled) return;
+          if (!video.muted) {
+            video.muted = true;
+            setMuted(true); // 同步回按鈕圖示，維持狀態一致
+            const retry = video.play();
+            if (retry && typeof retry.catch === "function") retry.catch(() => {});
+          }
+        });
+      }
     };
+
+    // iOS 原生 HLS：剛指派 src 時資料還沒就緒，立即 play() 可能被中止；
+    // 再等 canplay 補播一次，確保換片後的冷啟動也會自動起播。
+    const onCanPlay = () => tryPlay();
 
     if (!isHlsSource(src) || canPlayNativeHls()) {
       video.src = src;
+      video.addEventListener("canplay", onCanPlay);
       tryPlay();
     } else {
       import("hls.js")
@@ -89,6 +108,7 @@ function ShortsVideo({
 
     return () => {
       cancelled = true;
+      video.removeEventListener("canplay", onCanPlay);
       if (hlsRef.current) {
         hlsRef.current.destroy();
         hlsRef.current = null;
@@ -540,6 +560,7 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
                           src={short.hlsUrl}
                           playing={playing}
                           muted={muted}
+                          setMuted={setMuted}
                           onTimeUpdate={handleTimeUpdate}
                         />
                       ) : null}
