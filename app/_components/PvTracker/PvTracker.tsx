@@ -18,6 +18,17 @@ declare global {
 }
 
 /**
+ * 從路徑取出影片 id：抓 `video` 這段後面的一段（如
+ * /programs/xxx/video/202607... → "202607..."）。非影片頁回傳 null。
+ */
+function getVideoId(pathname: string): string | null {
+  const segments = pathname.split("/").filter(Boolean);
+  const idx = segments.indexOf("video");
+  if (idx !== -1 && segments[idx + 1]) return segments[idx + 1];
+  return null;
+}
+
+/**
  * PV 追蹤（client component，集中處理所有需要瀏覽器互動的追蹤邏輯）。
  *
  * 為什麼放這裡而不是 layout：layout 是 Server Component，不能傳
@@ -34,9 +45,17 @@ export default function PvTracker() {
 
   const sendPv = () => {
     try {
-      // 比照正式站：第一個參數帶當前網域（正式環境為 video.ltn.com.tw），
-      // type / group / no 留空。
-      window.getScrNews?.(location.hostname, "", "", "");
+      // 清掉上一頁殘留的 PV script 節點，避免重複計數。因為 c.js 會在每次換頁時新增一個
+      document
+        .querySelectorAll('script[src*="RI_Server"]')
+        .forEach((el) => el.remove());
+
+      // /topic/video/[id]、/latest/video/[id]）：影片詳細頁  group 帶 "video"、no 帶影片 id；
+      // 其餘頁面 group / no 留空。第一個參數帶當前網域（正式環境為 video.ltn.com.tw）。
+      const videoId = getVideoId(pathname);
+      const group = videoId ? "video" : "";
+      const no = videoId ?? "";
+      window.getScrNews?.(location.hostname, "", group, no);
     } catch (e) {
       console.error("PV 追蹤失敗", e);
     }
