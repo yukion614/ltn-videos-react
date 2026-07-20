@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent, SyntheticEvent } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import styles from "./page.module.scss";
 import NotFoundPanel from "@/app/_components/NotFoundPanel/NotFoundPanel";
 import type { ShortsApiItem, ShortsApiResponse } from "../_interfaces/shorts";
@@ -27,125 +27,6 @@ function canPlayNativeHls() {
   return (
     v.canPlayType("application/vnd.apple.mpegurl") !== "" ||
     v.canPlayType("application/x-mpegURL") !== ""
-  );
-}
-
-// 短影音的原生 <video>：來源掛載（iOS 原生 HLS／其他瀏覽器 hls.js）與播放／靜音
-// 都在這裡處理，取代 react-player，避免其 hls lazy chunk 在 iOS 首次載入卡住。
-// 只有目前這則會掛載本元件；切換到別則時整個卸載（cleanup 銷毀 hls.js 實例）。
-function ShortsVideo({
-  src,
-  playing,
-  muted,
-  setMuted,
-  videoRef,
-  onTimeUpdate,
-}: {
-  src: string;
-  playing: boolean;
-  muted: boolean;
-  setMuted: (m: boolean) => void;
-  videoRef: React.MutableRefObject<HTMLVideoElement | null>;
-  onTimeUpdate: (e: SyntheticEvent<HTMLVideoElement>) => void;
-}) {
-  // 非原生 HLS 瀏覽器（Chrome/Firefox/Android）用的 hls.js 實例，卸載時要銷毀
-  const hlsRef = useRef<{ destroy: () => void } | null>(null);
-
-  // 掛載來源並起播（原生 HLS 直接指派 src，其餘用 hls.js 接上）
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || !src) return;
-    let cancelled = false;
-
-    // iOS 靜音自動播放的前提：play() 前 muted/playsInline 必須已是 true
-    video.muted = muted;
-    video.playsInline = true;
-
-    // 起播：帶聲 autoplay 被 iOS 擋掉時，退回靜音再播一次，確保換到下一則一定會動。
-    // （原本只 catch 吞掉錯誤，使用者一旦開過聲音，之後每則都因帶聲被擋而停在封面。）
-    const tryPlay = () => {
-      if (cancelled || !playing) return;
-      const p = video.play();
-      if (p && typeof p.catch === "function") {
-        p.catch(() => {
-          if (cancelled) return;
-          if (!video.muted) {
-            video.muted = true;
-            setMuted(true); // 同步回按鈕圖示，維持狀態一致
-            const retry = video.play();
-            if (retry && typeof retry.catch === "function") retry.catch(() => {});
-          }
-        });
-      }
-    };
-
-    // iOS 原生 HLS：剛指派 src 時資料還沒就緒，立即 play() 可能被中止；
-    // 再等 canplay 補播一次，確保換片後的冷啟動也會自動起播。
-    const onCanPlay = () => tryPlay();
-
-    if (!isHlsSource(src) || canPlayNativeHls()) {
-      video.src = src;
-      video.addEventListener("canplay", onCanPlay);
-      tryPlay();
-    } else {
-      import("hls.js")
-        .then(({ default: Hls }) => {
-          if (cancelled) return;
-          if (Hls.isSupported()) {
-            const hls = new Hls();
-            hlsRef.current = hls;
-            hls.loadSource(src);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
-          } else {
-            // 極少數：既不原生支援也不支援 hls.js，仍試著直接餵 src
-            video.src = src;
-            tryPlay();
-          }
-        })
-        .catch(() => {});
-    }
-
-    return () => {
-      cancelled = true;
-      video.removeEventListener("canplay", onCanPlay);
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
-    };
-    // muted/playing 只作為起播的初始值，變動由下方各自的 effect 同步
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src]);
-
-  // 播放／暫停（使用者點擊影片切換）
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (playing) {
-      const p = video.play();
-      if (p && typeof p.catch === "function") p.catch(() => {});
-    } else {
-      video.pause();
-    }
-  }, [playing, videoRef]);
-
-  // 靜音切換
-  useEffect(() => {
-    const video = videoRef.current;
-    if (video) video.muted = muted;
-  }, [muted, videoRef]);
-
-  return (
-    <video
-      ref={videoRef}
-      className={styles.player}
-      loop
-      playsInline
-      autoPlay
-      muted={muted}
-      onTimeUpdate={onTimeUpdate}
-    />
   );
 }
 
@@ -264,10 +145,40 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
   const [playing, setPlaying] = useState(true);
   const [played, setPlayed] = useState(0); // 目前這則的播放進度 0~1
 
-  // 影片元素與進度條：用來讀取播放時間、換算拖曳位置後跳轉
-  const playerRef = useRef<HTMLVideoElement | null>(null);
+  // 進度條
   const seekBarRef = useRef<HTMLDivElement | null>(null);
   const seekingRef = useRef(false);
+
+  // 整個短影音牆「共用同一個 <video>」，切換時只換它的 src、不重建元素。
+  // 原本每滑一則就掛一個全新的 <video>，在 iOS 上等於丟失了「使用者手勢授權」——
+  // 使用者開過聲音後，下一則因是全新元素、無手勢紀錄，帶聲 autoplay 被擋 → 被迫轉靜音，
+  // 造成「聲音記不住、每則都變回靜音」。改成同一個元素持續存在，iOS 才會延續授權、記住聲音。
+  // 用 document.createElement 手動建立（而非 React render），才能在切換 slide 時用 appendChild
+  // 把「同一個」DOM 節點搬到目前這則的掛載點，不被 React 的重新掛載銷毀。
+  const videoElRef = useRef<HTMLVideoElement | null>(null);
+  if (videoElRef.current === null && typeof document !== "undefined") {
+    const v = document.createElement("video");
+    v.className = styles.player;
+    v.loop = true;
+    v.muted = true;
+    v.autoplay = true;
+    v.playsInline = true;
+    v.setAttribute("playsinline", "");
+    v.setAttribute("webkit-playsinline", "");
+    v.style.opacity = "0"; // 換片載入期間先透明，露出封面，避免閃到上一則的畫面
+    videoElRef.current = v;
+  }
+  // 非原生 HLS 瀏覽器（Chrome/Firefox/Android）用的 hls.js 實例，換來源／卸載時要銷毀
+  const hlsRef = useRef<{ destroy: () => void } | null>(null);
+
+  // 目前這則的掛載點：新的 active slide 的掛載 div 一出現，就把共用 <video> 搬進去。
+  // 只在 node 非 null 時採用，避免舊 slide 卸下 ref（傳 null）時把記錄清掉；
+  // 各 slide 的掛載 div 都常駐（不隨切換卸載），所以搬移時 <video> 不會被連帶移除、播放不中斷。
+  const attachMount = useCallback((node: HTMLDivElement | null) => {
+    const v = videoElRef.current;
+    if (!node || !v) return;
+    if (v.parentElement !== node) node.appendChild(v);
+  }, []);
 
   // /shorts/{id} 有自己的 server 路由會帶 initialId 進來；直接進 /shorts/ 時沒有，
   // 就從網址 /shorts/{slug} 自行解析（保險，也讓元件能獨立運作）。
@@ -366,17 +277,132 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
     setPlayed(0);
   }, [index]);
 
-  // 播放中持續更新進度條（拖曳中先不更新，避免被播放進度蓋回去）
-  const handleTimeUpdate = (e: SyntheticEvent<HTMLVideoElement>) => {
-    if (seekingRef.current) return;
-    const v = e.currentTarget;
-    if (v.duration > 0) setPlayed(v.currentTime / v.duration);
-  };
+  const activeSrc = items[index]?.hlsUrl;
+
+  // 共用 <video> 的常駐監聽（只掛一次）：進度條更新、載入好後淡入顯示。
+  useEffect(() => {
+    const v = videoElRef.current;
+    if (!v) return;
+    // 播放中持續更新進度條（拖曳中先不更新，避免被播放進度蓋回去）
+    const onTimeUpdate = () => {
+      if (seekingRef.current) return;
+      if (v.duration > 0) setPlayed(v.currentTime / v.duration);
+    };
+    // 新來源真的有畫面了才顯示，換片過場期間維持透明、露出封面
+    const onReady = () => {
+      v.style.opacity = "1";
+    };
+    v.addEventListener("timeupdate", onTimeUpdate);
+    v.addEventListener("playing", onReady);
+    v.addEventListener("loadeddata", onReady);
+    return () => {
+      v.removeEventListener("timeupdate", onTimeUpdate);
+      v.removeEventListener("playing", onReady);
+      v.removeEventListener("loadeddata", onReady);
+    };
+  }, []);
+
+  // 換來源並起播：只有 active 那則的 src 變動時重新掛載來源到共用 <video>。
+  useEffect(() => {
+    const video = videoElRef.current;
+    if (!video || !activeSrc) return;
+    let cancelled = false;
+
+    video.style.opacity = "0"; // 先藏起來，等新來源就緒（loadeddata/playing）再淡入
+    // iOS 靜音自動播放的前提：play() 前 muted/playsInline 必須已是 true
+    video.muted = muted;
+    video.playsInline = true;
+
+    // 起播：帶聲 autoplay 被 iOS 擋掉時，退回靜音再播一次，確保換到下一則一定會動。
+    const tryPlay = () => {
+      if (cancelled || !playing) return;
+      const p = video.play();
+      if (p && typeof p.catch === "function") {
+        p.catch(() => {
+          if (cancelled) return;
+          if (!video.muted) {
+            video.muted = true;
+            setMuted(true); // 同步回按鈕圖示，維持狀態一致
+            const retry = video.play();
+            if (retry && typeof retry.catch === "function") retry.catch(() => {});
+          }
+        });
+      }
+    };
+
+    // iOS 原生 HLS：剛指派 src 時資料還沒就緒，立即 play() 可能被中止；
+    // 再等 canplay 補播一次，確保換片後的冷啟動也會自動起播。
+    const onCanPlay = () => tryPlay();
+
+    // 先銷毀上一則殘留的 hls.js 實例，再掛新來源
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    if (!isHlsSource(activeSrc) || canPlayNativeHls()) {
+      video.src = activeSrc;
+      video.addEventListener("canplay", onCanPlay);
+      tryPlay();
+    } else {
+      import("hls.js")
+        .then(({ default: Hls }) => {
+          if (cancelled) return;
+          if (Hls.isSupported()) {
+            const hls = new Hls();
+            hlsRef.current = hls;
+            hls.loadSource(activeSrc);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, tryPlay);
+          } else {
+            // 極少數：既不原生支援也不支援 hls.js，仍試著直接餵 src
+            video.src = activeSrc;
+            tryPlay();
+          }
+        })
+        .catch(() => {});
+    }
+
+    return () => {
+      cancelled = true;
+      video.removeEventListener("canplay", onCanPlay);
+    };
+    // muted/playing 只作為起播的初始值，變動由下方各自的 effect 同步
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSrc]);
+
+  // 元件卸載時銷毀 hls.js 實例（換片不銷毀由上方 effect 處理）
+  useEffect(() => {
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, []);
+
+  // 播放／暫停（使用者點擊影片切換）
+  useEffect(() => {
+    const video = videoElRef.current;
+    if (!video) return;
+    if (playing) {
+      const p = video.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [playing]);
+
+  // 靜音切換
+  useEffect(() => {
+    const video = videoElRef.current;
+    if (video) video.muted = muted;
+  }, [muted]);
 
   // 依滑鼠／手指在進度條上的位置換算成時間並跳轉
   const seekToClientX = (clientX: number) => {
     const bar = seekBarRef.current;
-    const video = playerRef.current;
+    const video = videoElRef.current;
     if (!bar || !video || !video.duration) return;
     const rect = bar.getBoundingClientRect();
     const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
@@ -553,17 +579,12 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
                         style={{ backgroundImage: `url(${short.posterUrl})` }}
                       />
 
-                      {/* 只有目前這則掛載播放器 */}
-                      {isActive ? (
-                        <ShortsVideo
-                          videoRef={playerRef}
-                          src={short.hlsUrl}
-                          playing={playing}
-                          muted={muted}
-                          setMuted={setMuted}
-                          onTimeUpdate={handleTimeUpdate}
-                        />
-                      ) : null}
+                      {/* 共用 <video> 的掛載點：每則都常駐（切換時不卸載，避免搬移中把
+                          播放中的 <video> 連帶移除），只有目前這則掛上 ref，把共用元素搬進來 */}
+                      <div
+                        className={styles.videoMount}
+                        ref={isActive ? attachMount : undefined}
+                      />
 
                       {isActive ? (
                         <>

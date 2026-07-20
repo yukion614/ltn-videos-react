@@ -82,6 +82,13 @@ $nav-h: 160px;
   background-size: cover;
 }
 
+// 共用 <video> 的掛載點：填滿影片框，切換時共用元素被搬進目前這則的這層
+.videoMount {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
 .player {
   position: absolute;
   inset: 0;
@@ -91,6 +98,8 @@ $nav-h: 160px;
   background: transparent;
   // 原生 <video>：以高度填滿外框、左右裁切置中
   object-fit: cover;
+  // 換片載入期間 opacity 由 JS 切換（0→1），淡入避免閃到上一則畫面
+  transition: opacity 0.18s ease;
 }
 
 .playerLoading {
