@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "start:docker": "next start -p ${PORT:-3000} -H 0.0.0.0"
   },
   "dependencies": {
     "hls.js": "^1.6.16",
