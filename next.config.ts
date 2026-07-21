@@ -13,7 +13,6 @@ import type { NextConfig } from "next";
 //   （見各路由的 `export const revalidate`），一樣不必重 build。
 //
 const config: NextConfig = {
-  trailingSlash: true, // 沿用既有網址形狀（結尾斜線），避免 canonical 全數變動
   images: {
     unoptimized: true, // 已全面改用原生 <img>
   },
