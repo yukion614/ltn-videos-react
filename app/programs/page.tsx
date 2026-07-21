@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import Crumb from "../_components/Crumb/Crumb";
 import type {
   PlaylistEntry,
@@ -54,13 +53,13 @@ function toVideoHref(slug: string, videoKey: string | number) {
 function SectionHeader({ name, href }: { name: string; href: string }) {
   return (
     <div className={styles.sectionHeader}>
-      {/* /programs/{key} 是導向 _shell 外殼的假路由，沒有靜態 index.txt；關掉 prefetch 避免 404 */}
-      <Link className={styles.name} href={href} prefetch={false}>
+      {/* 改用原生 <a>：點擊走整頁重載，不會發出 Next.js 的 ?_rsc= 導覽請求 */}
+      <a className={styles.name} href={href}>
         {name}
-      </Link>
-      <Link className={styles.more} href={href} prefetch={false}>
+      </a>
+      <a className={styles.more} href={href}>
         看更多
-      </Link>
+      </a>
     </div>
   );
 }
@@ -146,14 +145,13 @@ export default function ProgramsPage() {
                   {/* 前四支影片 */}
                   <div className={styles.grid}>
                     {section.videos.map((video, cardIndex) => (
-                      <Link
+                      <a
                         className={styles.card}
                         href={toVideoHref(
                           section.slug,
                           watchUrlToSlug(video.watchUrl) ?? video.id,
                         )}
-                        // 影片頁是 ISR；prefetch 會讓每個連結都在伺服器渲染一次，關掉省成本
-                        prefetch={false}
+                        // 改用原生 <a>：點擊走整頁重載，不發出 ?_rsc= 導覽請求
                         key={video.id}
                       >
                         <span className={styles.media}>
@@ -181,7 +179,7 @@ export default function ProgramsPage() {
                             {video.title}
                           </span>
                         </span>
-                      </Link>
+                      </a>
                     ))}
                   </div>
                 </section>

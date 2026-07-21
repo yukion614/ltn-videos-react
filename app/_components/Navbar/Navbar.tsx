@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -34,7 +33,7 @@ export default function Navbar() {
   return (
     <div className={styles.nav}>
       <div className={styles.wrap}>
-        <Link href="/">
+        <a href="/">
           <img
             className={styles.navLogo}
             src={"/ltn-vedio.png"}
@@ -43,27 +42,19 @@ export default function Navbar() {
             width={95}
             height={24}
           />
-        </Link>
+        </a>
 
         <nav className={styles.navLinks}>
+          {/* 主選單用原生 <a>：點擊走整頁重載，不發出 Next.js 的 ?_rsc= 導覽請求 */}
           {mainLinks.map((link, index) => {
             const className = pathname.includes(`/${link.link}`)
               ? styles.active
               : "";
 
-            // 「話題」用原生 <a>，不走 client 端換頁。
-            if (link.link === "topic") {
-              return (
-                <a href={`/${link.link}`} key={index} className={className}>
-                  {link.name}
-                </a>
-              );
-            }
-
             return (
-              <Link href={`/${link.link}`} key={index} className={className}>
+              <a href={`/${link.link}`} key={index} className={className}>
                 {link.name}
-              </Link>
+              </a>
             );
           })}
         </nav>
