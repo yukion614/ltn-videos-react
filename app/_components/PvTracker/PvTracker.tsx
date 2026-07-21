@@ -18,13 +18,16 @@ declare global {
 }
 
 /**
- * 從路徑取出影片 id：抓 `video` 這段後面的一段（如
- * /programs/xxx/video/202607... → "202607..."）。非影片頁回傳 null。
+ * 從路徑取出影片 id：抓 `video` 或 `shorts` 這段後面的一段（如
+ * /programs/xxx/video/202607... → "202607..."；/shorts/{slug} → "{slug}"）。
+ * 非影片／短影音頁回傳 null。
  */
 function getVideoId(pathname: string): string | null {
   const segments = pathname.split("/").filter(Boolean);
-  const idx = segments.indexOf("video");
-  if (idx !== -1 && segments[idx + 1]) return segments[idx + 1];
+  for (const key of ["video", "shorts"]) {
+    const idx = segments.indexOf(key);
+    if (idx !== -1 && segments[idx + 1]) return segments[idx + 1];
+  }
   return null;
 }
 
@@ -50,8 +53,9 @@ export default function PvTracker() {
         .querySelectorAll('script[src*="RI_Server"]')
         .forEach((el) => el.remove());
 
-      // /topic/video/[id]、/latest/video/[id]）：影片詳細頁  group 帶 "video"、no 帶影片 id；
-      // 其餘頁面 group / no 留空。第一個參數帶當前網域（正式環境為 video.ltn.com.tw）。
+      // 影片詳細頁（/topic/video/[id]、/latest/video/[id]）與短影音（/shorts/[id]）：
+      // group 帶 "video"、no 帶影片 id；其餘頁面 group / no 留空。
+      // 第一個參數帶當前網域（正式環境為 video.ltn.com.tw）。
       const videoId = getVideoId(pathname);
       const group = videoId ? "video" : "";
       const no = videoId ?? "";
