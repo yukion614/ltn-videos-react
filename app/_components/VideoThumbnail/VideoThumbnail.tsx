@@ -1,5 +1,4 @@
 import styles from "./VideoThumbnail.module.scss";
-import Link from "next/link";
 
 export default function VideoPlayer({
   isLoaded = false,
@@ -26,11 +25,8 @@ export default function VideoPlayer({
   className?: string;
 }) {
   return (
-    <Link
+    <a
       href={slug}
-      // slug 多半指向影片詳情頁（ISR）；prefetch 會讓每個縮圖連結都在伺服器
-      // 渲染一次，一頁縮圖很多、成本不划算，關掉。
-      prefetch={false}
       className={[
         variant === "row" ? styles.topicRow : styles.topicLead,
         fill ? styles.fill : "",
@@ -88,6 +84,6 @@ export default function VideoPlayer({
       {isLoaded && title && variant !== "overlay" ? (
         <strong className={styles.topicTitle}>{title}</strong>
       ) : null}
-    </Link>
+    </a>
   );
 }

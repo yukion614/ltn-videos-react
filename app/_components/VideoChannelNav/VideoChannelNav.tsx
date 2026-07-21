@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import style from "./VideoChannelNav.module.scss";
 import { usePathname } from "next/navigation";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
@@ -49,7 +48,7 @@ export default function VideoChannelNav() {
   return (
     <div className={style.ltnheader} data-desc="置頂選單">
       <div className={style.channel}>
-        <Link
+        <a
           href="https://www.ltn.com.tw"
           className={style.logo}
           title="自由時報"
@@ -62,7 +61,7 @@ export default function VideoChannelNav() {
             width={160}
             height={33}
           />
-        </Link>
+        </a>
 
         <ul>
           {menuLinks.map((link) => (
@@ -70,14 +69,14 @@ export default function VideoChannelNav() {
               key={link.href}
               className={link.rich ? style.li_rich : undefined}
             >
-              <Link
+              <a
                 href={link.href}
                 title={link.title}
                 data-desc={link.title}
                 target={link.external ? "_blank" : undefined}
               >
                 {link.label ?? link.title}
-              </Link>
+              </a>
             </li>
           ))}
         </ul>

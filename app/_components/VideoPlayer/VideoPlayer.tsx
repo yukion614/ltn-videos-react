@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { loadPlayerPrefs, savePlayerPrefs } from "./playerPrefs";
 import styles from "./VideoPlayer.module.scss";
@@ -676,14 +675,12 @@ export default function VideoPlayer({
           />
           {titleHref ? (
             // 標題本身就是連結：整塊定位於頂端，點選進入該影片詳情頁
-            <Link
+            <a
               href={titleHref}
-              // titleHref 指向影片詳情頁（ISR）；prefetch 會在伺服器多渲染一次，關掉。
-              prefetch={false}
               className={`${styles.mediaTitleTop} ${styles.mediaTitleLink}${hideCls}`}
             >
               {title}
-            </Link>
+            </a>
           ) : (
             <span className={`${styles.mediaTitleTop}${hideCls}`}>{title}</span>
           )}

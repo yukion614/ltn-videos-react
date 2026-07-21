@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "@/styles/videopage.module.scss";
 import { useIsMobile } from "@/app/hooks/useIsMobile";

@@ -1,5 +1,4 @@
 import { Fragment } from "react";
-import Link from "next/link";
 import styles from "./Crumb.module.scss";
 
 interface crumbsProps {
@@ -13,11 +12,8 @@ export default function Crumb({ crumbs }: { crumbs: crumbsProps[] }) {
       {crumbs.map((crumb, index) => {
         return (
           <Fragment key={index}>
-            {/* 關掉 prefetch：麵包屑一載入就在畫面內，預設會自動預抓上層頁而發出 ?_rsc= */}
             {crumb.href ? (
-              <Link href={crumb.href} prefetch={false}>
-                {crumb.label}
-              </Link>
+              <a href={crumb.href}>{crumb.label}</a>
             ) : (
               <span aria-current="page">{crumb.label}</span>
             )}

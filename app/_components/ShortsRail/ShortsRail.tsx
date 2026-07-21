@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import type { ShortsRailItem } from "@/app/_interfaces/shorts";
 import { useDragScroll } from "@/app/hooks/useDragScroll";
 import { watchUrlToSlug } from "@/app/_lib/videoDetail";
@@ -117,12 +116,8 @@ export default function ShortsRail({ items }: { items: ShortsRailItem[] }) {
                 {/* 整張卡片是連結，點擊進入 /shorts/{slug} 觀看頁；拖曳時 useDragScroll 會攔截 click 不誤觸。
                 shorts 頁以 watchUrl 的 slug 比對目標（見 ShortsFeed 的 itemSlug），
                 這裡連結也要用同一種 slug，否則對不上會被判為無效路由顯示 404 */}
-                <Link
+                <a
                   href={`/shorts/${watchUrlToSlug(short.watchUrl) ?? short.id}`}
-                  // /shorts/:id 是靠 rewrite 導回 /shorts 外殼的假路由，沒有對應的靜態
-                  // RSC payload（index.txt），開啟預抓取會對不存在的檔案發出 404。點擊導航
-                  // 不受影響，這裡關掉 prefetch 純粹避免 console 噴一整排 404。
-                  prefetch={false}
                   className={styles.cardLink}
                   draggable={false}
                 >
@@ -144,7 +139,7 @@ export default function ShortsRail({ items }: { items: ShortsRailItem[] }) {
                       </small>
                     </div>
                   </div>
-                </Link>
+                </a>
               </article>
             );
           })

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Crumb from "@/app/_components/Crumb/Crumb";
 import NotFoundPanel from "@/app/_components/NotFoundPanel/NotFoundPanel";
@@ -213,14 +212,13 @@ export default function CategoryClient({
     <div className={styles.tabsWrap}>
       <nav className={styles.programTabs} aria-label="節目分類">
         {programs.map((item) => (
-          <Link
+          <a
             className={item.key === slug ? styles.tabActive : undefined}
             href={`/programs/${item.key}`}
-            prefetch={false}
             key={item.key}
           >
             {item.name}
-          </Link>
+          </a>
         ))}
       </nav>
     </div>

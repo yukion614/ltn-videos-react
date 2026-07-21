@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import styles from "@/styles/listpage.module.scss";
 import Crumb from "../_components/Crumb/Crumb";
 import { useInfiniteVideos } from "../hooks/useInfiniteVideos";
