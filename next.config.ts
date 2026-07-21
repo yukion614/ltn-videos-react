@@ -13,6 +13,9 @@ import type { NextConfig } from "next";
 //   （見各路由的 `export const revalidate`），一樣不必重 build。
 //
 const config: NextConfig = {
+  // 產出獨立部署包（.next/standalone）：只帶必要的 node_modules 與精簡 server.js，
+  // 適合裝進 Docker image，映像更小、不必在容器內完整 npm install。
+  output: "standalone",
   images: {
     unoptimized: true, // 已全面改用原生 <img>
   },
