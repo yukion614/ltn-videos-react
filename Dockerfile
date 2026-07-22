@@ -13,10 +13,8 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# --legacy-peer-deps：react 目前是 19 RC 版，部分套件的 peer 檢查不認預發布版，
-# 不加可能 ERESOLVE 失敗；升到 React 19 正式版後可拿掉
 COPY package.json package-lock.json ./
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 
 COPY . .
 
