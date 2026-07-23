@@ -5,9 +5,10 @@ import styles from "@/styles/videopage.module.scss";
 import LiveCrumb from "@/app/_components/Crumb/LiveCrumb";
 import ExpandableContent from "@/app/_components/VideoDetail/ExpandableContent";
 import RelatedVideos from "@/app/_components/RelatedVideos/RelatedVideos";
+import JsonLd from "@/app/_components/JsonLd/JsonLd";
 import type { BrandVideoResponse } from "@/app/_interfaces/BrandVideo";
 import type { PlaylistVideoItem } from "@/app/_interfaces/playlist";
-import { buildVideoCrumbs } from "@/app/_lib/videoDetail";
+import { buildVideoCrumbs, buildVideoJsonLd } from "@/app/_lib/videoDetail";
 
 // 影片詳細頁的共用畫面。
 // 兩個 server 路由（programs / topic，build 時預抓）與 client fallback 外殼
@@ -86,9 +87,11 @@ export default function VideoDetail({
   const isTopic = videoBasePath.startsWith("/topic");
   const isLatest = videoBasePath.startsWith("/latest");
   const crumbs = buildVideoCrumbs(data, { isTopic, isLatest });
+  const jsonLd = buildVideoJsonLd(data);
 
   return (
     <main className={styles.page}>
+      {jsonLd ? <JsonLd data={jsonLd} /> : null}
       <div className={styles.wrap}>
         {/* 麵包屑：build 時的 crumbs 當初值，client 端再以最新 API 覆蓋 */}
         <LiveCrumb

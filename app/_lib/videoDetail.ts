@@ -101,7 +101,7 @@ export async function getPlaylistPage(
     const data = (await res.json()) as PlaylistItemsResponse;
     const items = data.items ?? [];
     const more = data.hasMore ?? items.length > 0;
-    return { items, nextPage: more ? data.nextPage ?? page + 1 : null };
+    return { items, nextPage: more ? (data.nextPage ?? page + 1) : null };
   } catch {
     return { items: [], nextPage: null };
   }
@@ -194,7 +194,7 @@ export async function getCategoryPageData(
   }
 
   const leadSlug = items[0]
-    ? watchUrlToSlug(items[0].watchUrl) ?? String(items[0].id)
+    ? (watchUrlToSlug(items[0].watchUrl) ?? String(items[0].id))
     : "";
   if (!leadSlug) return { items, nextPage, leadHls: "", leadSprite: "" };
 
@@ -252,6 +252,48 @@ export function buildVideoCrumbs(
   }
 
   return crumbs;
+}
+
+/**
+ * 組出影片頁的 schema.org VideoObject JSON-LD。
+ *
+ * 後端詳情 API 已回傳現成的 data.schema（BrandVideoSchema），優先直接沿用；
+ * 只有它缺漏時（如最新頁單片、fallback）才用 video 欄位自組一份，讓每支影片頁
+ * 都至少有一組結構化資料。回傳可直接丟給 <JsonLd> 的物件，沒有可用資料時回 null。
+ */
+export function buildVideoJsonLd(
+  data: BrandVideoResponse | null,
+): Record<string, unknown> | null {
+  // 後端已備好完整 VideoObject：直接用，欄位最準（含 contentUrl / embedUrl）。
+  if (data?.schema && data.schema.name) {
+    // interface 可被 declaration merging 擴充，TS 不保證它只有已知的 key，
+    // 因此不給隱含 index signature，無法直接指派給 Record<string, unknown>
+    //（若 BrandVideoSchema 改成 type 別名就不需要轉型）。這裡只是型別層面的
+    // 轉換，執行期不做任何處理，物件會原封不動輸出到 JSON-LD。
+    return data.schema as unknown as Record<string, unknown>;
+  }
+
+  const video = data?.video;
+  if (!video) return null;
+
+  // 後備：用 video 欄位補一份最小可用的 VideoObject。
+  // thumbnailUrl 依 Google 建議用陣列；uploadDate 需 ISO 8601（用 publishedAtIso）。
+  const jsonLd: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    name: video.title,
+    description: video.summary || video.description || video.title,
+    uploadDate: video.publishedAtIso || undefined,
+  };
+
+  if (video.posterUrl) jsonLd.thumbnailUrl = [video.posterUrl];
+  if (video.canonicalUrl) jsonLd.url = video.canonicalUrl;
+  if (video.hlsUrl) {
+    jsonLd.contentUrl = video.hlsUrl;
+    jsonLd.embedUrl = video.hlsUrl;
+  }
+
+  return jsonLd;
 }
 
 /**
