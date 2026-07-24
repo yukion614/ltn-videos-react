@@ -1,5 +1,7 @@
 node_modules
 .next
+out
+tsconfig.tsbuildinfo
 .git
 .gitignore
 npm-debug.log
