@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # LTN 影音站（SSR + ISR）容器打包 — 本機 Docker 測試與 Cloud Run 部署共用
 #
 # next.config.ts 已設定 output:"standalone"，執行階段只需要
@@ -18,7 +19,9 @@
 #   docker build -t ltn-video . && docker run --rm -p 8080:8080 ltn-video
 #
 # Cloud Run 部署：
-# gcloud run deploy ltn-video --source . --region asia-east1 --allow-unauthenticated
+# 由 bat 的 cloudrun_deploy 工具處理，流程是本機 docker build + docker push 到
+# Artifact Registry，再 gcloud run deploy --image=<推上去的 image>，不是
+# gcloud run deploy --source .（不會上傳原始碼給 Cloud Build 遠端建置）。
 
 # ---- 第一階段：base（共用的 Node 工具鏈與依賴清單）----
 FROM node:24.12.0-alpine AS base
@@ -29,7 +32,7 @@ COPY package.json package-lock.json ./
 # ---- 第二階段：development（本機開發用，含完整 devDependencies）----
 FROM base AS development
 
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 COPY . .
 
@@ -41,9 +44,15 @@ CMD ["npm", "run", "dev", "--", "-H", "0.0.0.0", "-p", "3000"]
 # ---- 第三階段：builder（產出 .next/standalone）----
 FROM base AS builder
 
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 COPY . .
+
+# 接住 cloudrun_deploy 的 service.conf BUILD_ARGS 傳進來的建置期公開變數，
+# 沒有這兩行宣告，--build-arg 傳的值會被 docker build 忽略，npm run build
+# 讀不到，永遠只會落到 app/_lib/api.ts 裡寫死的預設值。
+ARG NEXT_PUBLIC_API_BASE
+ARG NEXT_PUBLIC_ENABLE_PV_TRACKER
 
 RUN npm run build
 
