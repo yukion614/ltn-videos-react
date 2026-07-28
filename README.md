@@ -5,7 +5,7 @@ Next.js（App Router，SSR + ISR）打造的 LTN 影音網站。
 ## 技術棧
 
 - Next.js 15.5 / React 19
-- Tailwind CSS 4.3
+- Sass（`*.module.scss`）/ Tailwind CSS 4.3
 - Node.js 24.12.0
 
 ## 前置需求
@@ -43,9 +43,20 @@ docker rm -f ltn-video-dev
 
 ## 環境變數
 
-不使用 `.env` 檔案。`NEXT_PUBLIC_API_BASE`、`NEXT_PUBLIC_ENABLE_PV_TRACKER` 等建置期
-公開變數，由部署工具（`bat` 的 `cloudrun_deploy`）透過 `service.conf` 的
-`BUILD_ARGS`，經 `docker build --build-arg` 注入，不寫死在程式碼或 `.env` 裡。
+依 Next 的檔案慣例分兩份，依指令自動選用：
+
+| 檔案               | 何時被讀                          |
+| ------------------ | --------------------------------- |
+| `.env.development` | `npm run dev`                     |
+| `.env.production`  | `npm run build` / `npm run start` |
+
+兩份都進 git，只放非機密的值；新增變數時兩份都要加。
+`NEXT_PUBLIC_*` 在 `npm run build` 當下就寫死進 bundle，執行期再設不會生效。
+
+| 變數                   | 用途                                                          |
+| ---------------------- | ------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_BASE` | 資料 API 的 host（`app/_lib/api.ts`），無預設值               |
+| `NEXT_PUBLIC_SITE_ENV` | 站台環境（`app/robots.ts`），不是 `production` 就整站禁止索引 |
 
 ## 開發流程
 
