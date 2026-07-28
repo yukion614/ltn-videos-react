@@ -168,6 +168,40 @@
     grid-template-columns: repeat(4, 1fr);
     gap: 22px 18px;
     grid-auto-rows: minmax(180px, auto);
+
+    // 前兩列（第一則播放器所跨的兩列）的最小高度直接算出來，不靠瀏覽器撐列。
+    //
+    // 第一則是 16:9 播放器（VideoPlayer 自帶 aspect-ratio），高度由它自己決定，
+    // 但它跨 2 列 —— 列軌要被撐開，得靠「把跨列項目的高度分攤回各列」這段規格。
+    // Safari 對「高度來自 aspect-ratio 的巢狀盒子」不吃這條（Chrome 會撐），
+    // 列軌只照縮圖高度算 → 播放器超出自己的格子，被第 3 列縮圖疊在上面。
+    //
+    // 算式（與 grid-template-columns / gap 綁在一起，改欄數或間距要同步改）：
+    //   內容寬 W  = min(100vw - 左右留白, 容器上限)
+    //   欄寬     = (W - 3 × 18px) / 4
+    //   大圖寬   = 3 欄 + 2 欄距 = 0.75W - 4.5px
+    //   大圖高   = 大圖寬 × 9/16 = 0.421875W - 2.53125px
+    //   單列高   = (大圖高 - 22px 列距) / 2 = 0.2109375W - 12.265625px
+    //
+    // 用 minmax(算式, auto)：窄桌機／標題多行使縮圖本身更高時仍會長高，
+    // 那種情況播放器只會在格子裡留白，不會再壓到下一列。
+    grid-template-rows: repeat(
+      2,
+      minmax(
+        calc(
+          0.2109375 *
+            min(100vw - var(--container-gutter), var(--container-max)) -
+            12.265625px
+        ),
+        auto
+      )
+    );
+  }
+
+  // 哨兵只有手機版固定播放器會用到；桌機留在流內會多撐 1px，
+  // 讓上面算好的列高剛好差 1px 對不齊，桌機直接不佔位。
+  .leadSentinel {
+    display: none;
   }
 
   /* 大圖：跨 3 欄 × 2 列；中圖：跨 2 欄 × 2 列。 */
