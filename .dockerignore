@@ -7,3 +7,4 @@ tsconfig.tsbuildinfo
 npm-debug.log
 docs
 README.md
+.env.development
