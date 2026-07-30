@@ -8,7 +8,11 @@ import ThemeProvider from "./_components/ThemeProvider/ThemeProvider";
 import VideoChannelNav from "./_components/VideoChannelNav/VideoChannelNav";
 import PvTracker from "./_components/PvTracker/PvTracker";
 import Script from "next/script";
-import { buildSiteIcons, SITE_SHARE_IMAGE } from "./_lib/siteIcons";
+import {
+  buildSiteIcons,
+  SITE_ORIGIN,
+  SITE_SHARE_IMAGE,
+} from "./_lib/siteIcons";
 // fonts
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -23,7 +27,7 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   // 站台網域基準：讓下方的 canonical / og:url 等相對路徑能解析成完整網址
-  metadataBase: new URL("https://videos.ltn.com.tw"),
+  metadataBase: new URL(SITE_ORIGIN),
   title: "自由影音",
   description: "直擊新聞現場，透過畫面掌握即時新聞脈動。",
   applicationName: "自由時報電子報",

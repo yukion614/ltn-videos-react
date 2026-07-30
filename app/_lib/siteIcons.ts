@@ -1,8 +1,18 @@
 import type { Metadata } from "next";
 
-/** 站台預設分享圖：og:image 與 image_src 的共同後備。 */
-export const SITE_SHARE_IMAGE =
-  "https://video.ltn.com.tw/assets/images/1200_LTN.png";
+/**
+ * 站台網域。全站唯一來源：layout 的 metadataBase 也用這個，換網域只改這一行。
+ */
+export const SITE_ORIGIN = "https://videos.ltn.com.tw";
+
+/**
+ * 站台預設分享圖：og:image 與 image_src 的共同後備。檔案在 public/1200_LTN.png。
+ *
+ * 這裡組成完整網址而非直接寫 "/1200_LTN.png"：openGraph / twitter 的圖 Next 會用
+ * metadataBase 自動補上網域，但 icons（image_src 屬於它）不會，相對路徑會原樣輸出，
+ * 不執行 JS 的舊分享服務解不出來。
+ */
+export const SITE_SHARE_IMAGE = `${SITE_ORIGIN}/1200_LTN.png`;
 
 const APPLE_TOUCH_ICON = "https://www.ltn.com.tw/assets/images/ltn.png";
 
