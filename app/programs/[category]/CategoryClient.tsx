@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Crumb from "@/app/_components/Crumb/Crumb";
 import NotFoundPanel from "@/app/_components/NotFoundPanel/NotFoundPanel";
 import type {
@@ -47,16 +47,52 @@ type ProgramEpisode = {
   thumbnailUrl?: string;
 };
 
+// 清單的一格：episode 為 null＝骨架（尚未載入／查無影片）
+type FeedSlot = { key: string; episode: ProgramEpisode | null };
+
+// 一段版型：主圖 + 側邊縮圖 + 下方整排縮圖
+type FeedBlock = {
+  key: string;
+  kind: "hero" | "medium";
+  hero: FeedSlot;
+  side: FeedSlot[];
+  rows: FeedSlot[];
+};
+
 /**
- * 版型輪迴規則（4 欄網格）：
- * - index 0：大圖（跨 3 欄 × 2 列）→ 旁邊 2 張縮圖 + 下方兩列各 4 張＝整段 11 個
- * - 之後每段：中圖（跨 2 欄 × 2 列）→ 旁邊 4 張縮圖 + 下方兩列各 4 張＝整段 13 個
- *   （大段 11 個之後，以 13 個為一個週期不斷重複中圖段）
+ * 版型輪迴規則：
+ * - 第 1 段：大圖（桌機 3 欄寬）+ 側邊 2 張 + 下方 8 張＝11 個
+ * - 之後每段：中圖（桌機 2 欄寬）+ 側邊 4 張 + 下方 8 張＝13 個
+ *
+ * 切成一段一段的 block 而不是排成一片扁平網格，是為了避開「跨列（grid-row: span 2）」：
+ * Safari 不把高度來自 aspect-ratio 的跨列項目計入列軌高度，大圖會滿出格子被下一排蓋住。
+ * 詳見 page.module.scss 開頭的說明。
  */
-function slotRole(index: number): "big" | "medium" | "normal" {
-  if (index === 0) return "big";
-  if (index >= 11 && (index - 11) % 13 === 0) return "medium";
-  return "normal";
+const HERO_BLOCK = { side: 2, rows: 8 } as const; // 1 + 2 + 8 = 11
+const MEDIUM_BLOCK = { side: 4, rows: 8 } as const; // 1 + 4 + 8 = 13
+
+function chunkFeed(slots: FeedSlot[]): FeedBlock[] {
+  const blocks: FeedBlock[] = [];
+  let cursor = 0;
+
+  while (cursor < slots.length) {
+    const isFirst = blocks.length === 0;
+    const spec = isFirst ? HERO_BLOCK : MEDIUM_BLOCK;
+    const sideEnd = cursor + 1 + spec.side;
+
+    blocks.push({
+      key: slots[cursor].key,
+      kind: isFirst ? "hero" : "medium",
+      hero: slots[cursor],
+      // 最後一段可能不滿，slice 自然會截短，網格照樣排得下
+      side: slots.slice(cursor + 1, sideEnd),
+      rows: slots.slice(sideEnd, sideEnd + spec.rows),
+    });
+
+    cursor = sideEnd + spec.rows;
+  }
+
+  return blocks;
 }
 
 export default function CategoryClient({
@@ -80,17 +116,12 @@ export default function CategoryClient({
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const fetchingRef = useRef(false);
 
-  // 手機版：第一則播放器滑過頂端後固定在最上層
+  // 手機版：第一則播放器滑過頂端後固定在最上層。
+  // 固定後的寬度與水平位置全部交給 CSS（.leadFixed，算式與 .wrap 相同），
+  // 這裡只負責「該不該固定」這一個布林值——不再有任何 JS 量出來的 px。
   const isMobile = useIsMobile(759);
-  const leadWrapRef = useRef<HTMLDivElement | null>(null);
   const leadSentinelRef = useRef<HTMLDivElement | null>(null);
   const [leadStuck, setLeadStuck] = useState(false);
-  // 播放器原始位置與尺寸：固定時沿用，維持原本大小與水平位置
-  const [leadBox, setLeadBox] = useState<{
-    left: number;
-    width: number;
-    height: number;
-  } | null>(null);
 
   const fetchPlaylistPage = useCallback(
     async (page: number) => {
@@ -143,20 +174,6 @@ export default function CategoryClient({
     return () => observer.disconnect();
   }, [fetchPlaylistPage, loadError, loadingMore, nextPage]);
 
-  // 量測播放器原始位置／尺寸（未固定時），固定時沿用並以等高佔位避免版面跳動
-  useEffect(() => {
-    if (!isMobile || !leadHls || leadStuck) return;
-    const el = leadWrapRef.current;
-    if (!el) return;
-    const update = () => {
-      const rect = el.getBoundingClientRect();
-      setLeadBox({ left: rect.left, width: rect.width, height: rect.height });
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, [isMobile, leadHls, leadStuck]);
-
   // 手機版：以哨兵偵測播放器是否滑到 navbar 下緣，是則固定在 navbar 下方
   useEffect(() => {
     if (!isMobile || !leadHls) {
@@ -206,7 +223,103 @@ export default function CategoryClient({
     );
   }, [program, slug, thumbnailPool]);
 
+  const feedBlocks = useMemo(() => {
+    // 查無影片／首屏：先排 10 格骨架，版型不會空一片
+    const slots: FeedSlot[] =
+      episodes.length > 0
+        ? episodes.map((episode) => ({ key: episode.id, episode }))
+        : Array.from({ length: 10 }, (_, index) => ({
+            key: `skeleton-${index}`,
+            episode: null,
+          }));
+
+    // 載入更多時在尾端補幾格骨架，慢網速滾到底才不會突然斷掉
+    if (episodes.length > 0 && loadingMore) {
+      for (let i = 0; i < 4; i += 1) {
+        slots.push({ key: `more-${episodes.length + i}`, episode: null });
+      }
+    }
+
+    return chunkFeed(slots);
+  }, [episodes, loadingMore]);
+
   const programName = program?.name ?? "";
+
+  // 主圖（大圖／中圖）：圖片自己的 aspect-ratio 就等於外層 .hero / .mediumHero 的比例，
+  // 剛好貼滿——不用 height: 100%，就不必依賴 Safari 對百分比高度的解析
+  // fill：桌機時填滿整格高度（中圖要跟右側 2×2 縮圖等高，見 .mediumHero 的註解）
+  const renderHero = (slot: FeedSlot, fill = false) => {
+    const item = slot.episode;
+    if (!item) {
+      return <VedoThumbnail isLoaded={false} variant="overlay" fill={fill} />;
+    }
+
+    return (
+      <VedoThumbnail
+        isLoaded={true}
+        variant="overlay"
+        fill={fill}
+        title={item.title}
+        duration={item.duration}
+        meta={`${item.date} · ${item.views}`}
+        slug={item.href}
+        src={item.thumbnailUrl}
+        alt={item.title}
+      />
+    );
+  };
+
+  // 側邊／下方的一般縮圖：圖片 16:9 + 標題在下
+  const renderThumb = (slot: FeedSlot) => {
+    const item = slot.episode;
+    if (!item) {
+      return (
+        <VedoThumbnail key={slot.key} isLoaded={false} variant="stacked" />
+      );
+    }
+
+    return (
+      <VedoThumbnail
+        key={slot.key}
+        isLoaded={true}
+        variant="stacked"
+        title={item.title}
+        duration={item.duration}
+        slug={item.href}
+        src={item.thumbnailUrl}
+        alt={item.title}
+      />
+    );
+  };
+
+  // 第一則：改用播放器並自動播放；手機版滑過 navbar 後固定在頂端
+  const renderLead = (item: ProgramEpisode) => (
+    <>
+      {/* 哨兵：偵測播放器是否滑過視窗頂端（手機版固定用） */}
+      <div
+        ref={leadSentinelRef}
+        className={styles.leadSentinel}
+        aria-hidden="true"
+      />
+      {/* 播放器固定後離開文件流，由這塊佔位撐住 .hero 原本的高度。
+          不能只靠 .hero 的 aspect-ratio：Safari 算不出來，格子會塌成 0，
+          下面的縮圖整批往上跳（連哨兵也一起上移，固定狀態還會來回抖動）。 */}
+      {leadStuck ? (
+        <div className={styles.leadSpacer} aria-hidden="true" />
+      ) : null}
+      <div className={leadStuck ? styles.leadFixed : undefined}>
+        <VideoPlayer
+          src={leadHls}
+          poster=""
+          title={item.title}
+          titleHref={item.href}
+          titlePosition="top"
+          spriteUrl={leadSprite}
+          allowFullscreen
+        />
+      </div>
+    </>
+  );
 
   const tabs = (
     <div className={styles.tabsWrap}>
@@ -265,166 +378,51 @@ export default function CategoryClient({
 
         <div className={styles.content}>
           <section className={styles.feed} aria-label="節目影片列表">
-            {episodes.length > 0
-              ? episodes.map((item, index) => {
-                  const role = slotRole(index);
+            {feedBlocks.map((block, blockIndex) => {
+              const isLeadBlock = blockIndex === 0;
+              const leadEpisode = block.hero.episode;
 
-                  // 第一則：改用播放器並自動播放；拿不到 hlsUrl 時顯示大圖縮圖
-                  if (index === 0) {
-                    return (
-                      <div key={item.id} className={styles.big}>
-                        {leadHls ? (
-                          <>
-                            {/* 哨兵：偵測播放器是否滑過視窗頂端（手機版固定用） */}
-                            <div
-                              ref={leadSentinelRef}
-                              className={styles.leadSentinel}
-                              aria-hidden="true"
-                            />
-                            {/* 固定時以等高佔位，避免下方內容往上跳 */}
-                            {leadStuck && leadBox ? (
-                              <div
-                                style={{ height: leadBox.height }}
-                                aria-hidden="true"
-                              />
-                            ) : null}
-                            <div
-                              ref={leadWrapRef}
-                              style={
-                                leadStuck && leadBox
-                                  ? {
-                                      position: "fixed",
-                                      top: "var(--navbar-height)",
-                                      left: leadBox.left,
-                                      width: leadBox.width,
-                                      zIndex: 30,
-                                    }
-                                  : undefined
-                              }
-                            >
-                              <VideoPlayer
-                                src={leadHls}
-                                poster=""
-                                title={item.title}
-                                titleHref={item.href}
-                                titlePosition="top"
-                                spriteUrl={leadSprite}
-                                allowFullscreen
-                              />
-                            </div>
-                          </>
-                        ) : (
-                          <VedoThumbnail
-                            isLoaded={true}
-                            variant="overlay"
-                            fill
-                            title={item.title}
-                            duration={item.duration}
-                            meta={`${item.date} · ${item.views}`}
-                            slug={item.href}
-                            src={item.thumbnailUrl}
-                            alt={item.title}
-                          />
-                        )}
+              return (
+                <Fragment key={block.key}>
+                  <div
+                    className={
+                      block.kind === "hero"
+                        ? styles.heroBlock
+                        : styles.mediumBlock
+                    }
+                  >
+                    <div
+                      className={
+                        block.kind === "hero" ? styles.hero : styles.mediumHero
+                      }
+                    >
+                      {/* 拿不到 hlsUrl 時退回顯示大圖縮圖 */}
+                      {isLeadBlock && leadEpisode && leadHls
+                        ? renderLead(leadEpisode)
+                        : renderHero(block.hero, block.kind === "medium")}
+                    </div>
+
+                    {block.side.length > 0 ? (
+                      <div
+                        className={
+                          block.kind === "hero"
+                            ? styles.heroSide
+                            : styles.mediumSide
+                        }
+                      >
+                        {block.side.map(renderThumb)}
                       </div>
-                    );
-                  }
+                    ) : null}
+                  </div>
 
-                  if (role === "big" || role === "medium") {
-                    return (
-                      <VedoThumbnail
-                        key={item.id}
-                        isLoaded={true}
-                        variant="overlay"
-                        fill
-                        className={role === "big" ? styles.big : styles.medium}
-                        title={item.title}
-                        duration={item.duration}
-                        meta={`${item.date} · ${item.views}`}
-                        slug={item.href}
-                        src={item.thumbnailUrl}
-                        alt={item.title}
-                      />
-                    );
-                  }
-
-                  return (
-                    <VedoThumbnail
-                      key={item.id}
-                      isLoaded={true}
-                      variant="stacked"
-                      title={item.title}
-                      duration={item.duration}
-                      slug={item.href}
-                      src={item.thumbnailUrl}
-                      alt={item.title}
-                    />
-                  );
-                })
-              : // 查無影片
-                Array.from({ length: 10 }).map((_, index) => {
-                  const role = slotRole(index);
-
-                  // 第一則：
-                  if (index === 0) {
-                    return (
-                      <div key={index} className={styles.big}>
-                        <VedoThumbnail
-                          isLoaded={false}
-                          variant="overlay"
-                          fill
-                        />
-                      </div>
-                    );
-                  }
-
-                  if (role === "big" || role === "medium") {
-                    return (
-                      <VedoThumbnail
-                        key={index}
-                        isLoaded={false}
-                        variant="overlay"
-                        fill
-                        className={role === "big" ? styles.big : styles.medium}
-                      />
-                    );
-                  }
-
-                  return (
-                    <VedoThumbnail
-                      key={index}
-                      isLoaded={false}
-                      variant="stacked"
-                    />
-                  );
-                })}
-
-            {/* 載入更多時，接在清單尾端補幾張 skeleton，慢網速滾到底才不會突然斷掉。*/}
-            {episodes.length > 0 &&
-              loadingMore &&
-              Array.from({ length: 4 }).map((_, i) => {
-                const role = slotRole(episodes.length + i);
-
-                if (role === "big" || role === "medium") {
-                  return (
-                    <VedoThumbnail
-                      key={`skeleton-${i}`}
-                      isLoaded={false}
-                      variant="overlay"
-                      fill
-                      className={role === "big" ? styles.big : styles.medium}
-                    />
-                  );
-                }
-
-                return (
-                  <VedoThumbnail
-                    key={`skeleton-${i}`}
-                    isLoaded={false}
-                    variant="stacked"
-                  />
-                );
-              })}
+                  {block.rows.length > 0 ? (
+                    <div className={styles.rowsBlock}>
+                      {block.rows.map(renderThumb)}
+                    </div>
+                  ) : null}
+                </Fragment>
+              );
+            })}
           </section>
 
           {nextPage !== null &&

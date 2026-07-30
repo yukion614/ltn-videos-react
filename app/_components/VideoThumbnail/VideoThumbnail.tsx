@@ -20,7 +20,8 @@ export default function VideoPlayer({
   slug?: string; //網址連結
   src?: string; //圖片連結
   alt?: string;
-  /** 讓圖片填滿父層格子高度（用於跨多列的大圖／中圖） */
+  /** 填滿父層格子的高度（而不是自己的 16:9）。桌機才生效；
+   *  父層須為 position: relative 並自備高度地板，詳見 .fill 的註解 */
   fill?: boolean;
   className?: string;
 }) {

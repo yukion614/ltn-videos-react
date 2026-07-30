@@ -8,6 +8,7 @@ import ThemeProvider from "./_components/ThemeProvider/ThemeProvider";
 import VideoChannelNav from "./_components/VideoChannelNav/VideoChannelNav";
 import PvTracker from "./_components/PvTracker/PvTracker";
 import Script from "next/script";
+import { buildSiteIcons, SITE_SHARE_IMAGE } from "./_lib/siteIcons";
 // fonts
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -52,24 +53,8 @@ export const metadata: Metadata = {
       "max-image-preview": "large",
     },
   },
-  icons: {
-    icon: "/faviconV2.png",
-    // iOS 加到主畫面用的圖示（官網有、原本專案缺）
-    apple: [
-      { url: "https://www.ltn.com.tw/assets/images/ltn.png", sizes: "180x180" },
-    ],
-    other: [
-      {
-        rel: "apple-touch-icon-precomposed",
-        url: "https://www.ltn.com.tw/assets/images/ltn.png",
-      },
-      // 舊版分享服務抓縮圖用
-      {
-        rel: "image_src",
-        url: "https://video.ltn.com.tw/assets/images/1200_LTN.png",
-      },
-    ],
-  },
+  // 站台層級圖示；影片詳細頁會用 buildSiteIcons(該片的圖) 覆寫，讓 image_src 跟著影片
+  icons: buildSiteIcons(),
   // 首頁層級的 Open Graph 預設值；影片／短影音詳情頁會再各自覆蓋
   openGraph: {
     type: "website",
@@ -79,12 +64,7 @@ export const metadata: Metadata = {
     // 分享到社群時的正規網址；相對路徑會用 metadataBase 補成完整網址
     url: "/",
     locale: "zh_TW",
-    images: [
-      {
-        url: "https://video.ltn.com.tw/assets/images/1200_LTN.png",
-        type: "image/png",
-      },
-    ],
+    images: [{ url: SITE_SHARE_IMAGE, type: "image/png" }],
   },
   twitter: {
     card: "summary",
@@ -92,7 +72,7 @@ export const metadata: Metadata = {
     creator: "@ltntw",
     title: "自由電子報影音頻道",
     description: "直擊新聞現場，透過畫面掌握即時新聞脈動。",
-    images: ["https://video.ltn.com.tw/assets/images/1200_LTN.png"],
+    images: [SITE_SHARE_IMAGE],
   },
   other: {
     // Google News 專用關鍵字

@@ -10,6 +10,7 @@ import type {
   PlaylistVideoItem,
 } from "@/app/_interfaces/playlist";
 import { API_BASE, LIST_REVALIDATE, VIDEO_REVALIDATE } from "./api";
+import { buildSiteIcons, SITE_SHARE_IMAGE } from "./siteIcons";
 
 const basePath = API_BASE;
 
@@ -297,37 +298,67 @@ export function buildVideoJsonLd(
 }
 
 /**
+ * 影片詳細頁共用的 Open Graph 預設值。
+ *
+ * Next 的 metadata 是「淺層合併」：頁面的 generateMetadata 一旦宣告 openGraph，
+ * app/layout.tsx 的整個 openGraph 物件會被取代（siteName / locale 等不會保留），
+ * 所以站台層級的欄位必須在這裡補回來。
+ */
+const VIDEO_OG_DEFAULTS = {
+  siteName: "自由時報電子報",
+  locale: "zh_TW",
+} as const;
+
+/** 同上，twitter 也會被整個取代，站台帳號要在這裡補。 */
+const VIDEO_TWITTER_DEFAULTS = {
+  site: "@ltntw",
+  creator: "@ltntw",
+} as const;
+
+/** 抓不到影片標題時的後備標題。 */
+const FALLBACK_TITLE = "影片詳細頁 | 自由影音";
+
+/**
  * 依據影片資料組出 SEO / OG / Twitter metadata。
- * 給各路由的 generateMetadata 共用。
+ * 給各路由的 generateMetadata 共用（latest / topic / programs / shorts）。
+ *
+ * 要改「影片詳細頁通用的 metadata」就改這支函式；只影響單一路由的差異，
+ * 由呼叫端拿回傳值再覆寫。
  */
 export function buildVideoMetadata(data: BrandVideoResponse | null): Metadata {
   const seo = data?.seo;
   const video = data?.video ?? fallbackVideo;
 
-  const title = seo?.title || video.title || "影片詳細頁 | 自由影音";
+  const title = seo?.title || video.title || FALLBACK_TITLE;
   // 後端沒給描述就不輸出 description / og:description（回 undefined，Next 會整個省略標籤）。
   // 不塞佔位字串：最新（/list）的影片 seo.description 常是空字串，硬填會讓 FB 分享預覽
   // 顯示一句沒有意義的話；沒有標籤時 FB 會自行略過該行，比顯示假資訊好。
   const description = seo?.description || video.summary || undefined;
-  const imageUrl = seo?.imageUrl || video.posterUrl;
+  // 圖片與描述不同：分享卡片沒有圖會很難看，且站台預設圖不算「假資訊」，故補後備。
+  const imageUrl = seo?.imageUrl || video.posterUrl || SITE_SHARE_IMAGE;
   const canonicalUrl = seo?.canonicalUrl || video.canonicalUrl;
 
   return {
     title,
     description,
     alternates: canonicalUrl ? { canonical: canonicalUrl } : undefined,
+    // 讓 <link rel="image_src"> 指向本片的圖，而不是繼承 layout 的站台預設圖。
+    // 一併帶上 favicon / apple-touch-icon，否則淺層合併會把它們一起蓋掉。
+    icons: buildSiteIcons(imageUrl),
     openGraph: {
+      ...VIDEO_OG_DEFAULTS,
       type: "video.other",
       title,
       description,
       url: canonicalUrl || undefined,
-      images: imageUrl ? [{ url: imageUrl }] : undefined,
+      images: [{ url: imageUrl }],
     },
     twitter: {
+      ...VIDEO_TWITTER_DEFAULTS,
       card: "summary_large_image",
       title,
       description,
-      images: imageUrl ? [imageUrl] : undefined,
+      images: [imageUrl],
     },
   };
 }

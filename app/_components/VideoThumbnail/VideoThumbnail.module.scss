@@ -68,15 +68,27 @@
   box-sizing: border-box;
 }
 
-/* fill：讓大圖／中圖填滿所跨越的多列格子高度（桌機才生效，行動版維持 16:9） */
+/* fill：讓大圖／中圖填滿「父層格子」的高度，而不是自己的 16:9。
+   用途是讓中圖跟同一列的 2×2 縮圖等高（見節目分類頁的 .mediumHero）。
+   桌機才生效，行動版維持 16:9。
+
+   用絕對定位而不是 height: 100%：父層的高度來自 flex 的 stretch，
+   Safari 對這種「非明寫」的高度解析百分比很不可靠（節目分類頁踩過，
+   詳見 app/programs/[category]/page.module.scss 檔頭）。絕對定位 + inset: 0
+   的高度直接取自定位父層，不經百分比解析。
+
+   ※ 用了 fill 的父層必須：(1) position: relative
+                          (2) 自備高度地板（此元素已離開文件流，
+                              同列沒有其他內容時整格會塌成 0） */
 @media (min-width: 760px) {
   .fill {
-    height: 100%;
+    position: absolute;
+    inset: 0;
   }
 
   .fill .Image {
     height: 100%;
-    aspect-ratio: auto;
+    aspect-ratio: auto; // 蓋掉 16:9，改成填滿父層
   }
 }
 
@@ -85,7 +97,6 @@
   position: relative;
   width: 100%;
   min-width: 0;
-  min-height: 0;
   box-sizing: border-box;
   aspect-ratio: 16 / 9;
   overflow: hidden;

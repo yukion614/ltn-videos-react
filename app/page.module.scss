@@ -1,5 +1,8 @@
 .home {
+  // svh＝工具列展開時的視窗高度。用 vh 的話 Safari 取的是「網址列收起」的大視窗，
+  // 工具列還在畫面上時文件會比可視區高出一截，滾到底會多一塊空白。
   min-height: 100vh;
+  min-height: 100svh;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);

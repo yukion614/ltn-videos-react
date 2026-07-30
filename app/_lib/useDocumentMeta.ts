@@ -83,6 +83,9 @@ export function useDocumentMeta(meta: DocMeta | null | undefined) {
 
     setMeta("name", "description", description);
     setLink("canonical", canonicalUrl);
+    // 舊版分享服務抓縮圖用。layout 會先輸出站台預設圖，這裡換成當前這則的圖，
+    // 否則 og:image 已是本片、image_src 卻還停在 1200_LTN.png，兩者不一致。
+    setLink("image_src", imageUrl);
 
     setMeta("property", "og:type", ogType || "website");
     setMeta("property", "og:title", title);

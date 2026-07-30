@@ -1,5 +1,47 @@
+/* 節目分類頁
+ *
+ * 版型輪迴（桌機等效 4 欄）：
+ *   第 1 段 11 個：大圖（3 欄寬）＋ 右側 2 張 ＋ 下方 8 張（4 欄 × 2 列）
+ *   之後每段 13 個：中圖（2 欄寬）＋ 右側 4 張（2 × 2）＋ 下方 8 張
+ *
+ * 每一段由 CategoryClient 包成獨立的 block（.heroBlock / .mediumBlock / .rowsBlock），
+ * 刻意「不跨列」——這是這頁一直在 Safari 跑版的根因：
+ *
+ *   Safari 不把「高度來自 aspect-ratio 的跨列項目」計入列軌高度（Chrome 會），
+ *   grid-row: span 2 的大圖會超出自己的格子，被下一排縮圖疊在上面。
+ *   過去的解法是用 100vw 反推容器寬、手算列高塞進 grid-template-rows —— 但
+ *   100vw 含捲軸寬度，容器用的是 100%（不含），Safari 畫出實體捲軸時兩者永遠
+ *   差一截：猜太大就在播放器下方留一塊空白，calc 被 Safari 判無效就整條塌掉重疊。
+ *
+ * 現在大圖自己佔一格（單列），右側縮圖包成巢狀容器，兩者並排成一列，
+ * CSS 裡不再有任何手算的 px 或 vw。同一列誰決定高度依段別而異：
+ *   大圖段：大圖的 16:9 較高 → 大圖決定，側邊 4 張以 1fr 均分
+ *   中圖段：側邊 2×2 較高 → 側邊決定，中圖用 fill 撐滿（見 .mediumHero）
+ *
+ * 大圖／中圖的寬度用「% 的 flex-basis」而不是 fr：% 是相對真實容器寬度的確定值；
+ * fr 要等內在尺寸算完才解析，Safari 在那個階段會當 0。
+ *   欄寬 col = (W - 3 × 18px) / 4
+ *   大圖   = 3 col + 2 gap = 75% - 4.5px
+ *   中圖   = 2 col + 1 gap = 50% - 9px
+ *
+ * ※ 高度的鐵則：只有「寬度是明確值」的元素才可以靠 aspect-ratio 決定高度。
+ *   內層的播放器與縮圖都是 width: 100% + aspect-ratio: 16/9，符合條件，實測各引擎
+ *   都算得準；但 .hero / .mediumHero 的寬度來自 flex（stretch 或 flex-basis），
+ *   Safari 對它們算出來的比例高度是錯的，而且錯的方向不一致（詳見 .hero 的實測數字）。
+ *   所以這兩格一律不設 aspect-ratio，高度交給內層子元素；子元素離開文件流
+ *   （手機版固定播放器）時，改由 .leadSpacer 以百分比 padding 撐高。
+ */
+
+$gap-x: 18px;
+$gap-y: 22px;
+$gap-x-mobile: 12px;
+$gap-y-mobile: 16px;
+
 .page {
+  // svh＝工具列展開時的視窗高度。用 vh 的話 Safari 取的是「網址列收起」的大視窗，
+  // 工具列還在畫面上時文件會比可視區高出一截，滾到底會多一塊空白。
   min-height: 100vh;
+  min-height: 100svh;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
@@ -88,25 +130,68 @@
   padding: 12px 0 24px;
 }
 
-/* 無限滾動的影片網格：手機預設 2 欄，大圖／中圖整排 */
+/* 無限滾動的影片清單：由一段一段的 block 直向堆疊而成。
+   block 之間的距離與 block 內的列距相同，看起來就是一片連續的網格。 */
 .feed {
+  display: flex;
+  flex-direction: column;
+  gap: $gap-y-mobile;
+}
+
+/* 大圖段／中圖段：主圖一格 + 右側縮圖一個巢狀容器。
+   行動版改成直向：主圖整排，側邊縮圖跟著排成 2 欄。 */
+.heroBlock,
+.mediumBlock {
+  display: flex;
+  flex-direction: column;
+  gap: $gap-y-mobile;
+}
+
+/* 主圖：高度由內層的播放器／縮圖撐出來，這一格自己「不」設 aspect-ratio
+   —— 別加回去。Safari 實測（不同視窗寬）：
+     .hero 應為 351x197 / 542x305 / 941x529，實際是 351x416 / 542x416 / 941x489，
+     高度完全不隨寬度改變，等於 aspect-ratio 沒參與計算，而且錯的方向不一致
+     （窄視窗算太高 → 下方留白；1366px 算太矮 → 播放器滿出去壓到下一排）。
+   原因見檔頭的「高度鐵則」。內容離開文件流時另外補地板：
+   手機版固定播放器 → .leadSpacer；桌機中圖 → .mediumHero::before。 */
+.hero,
+.mediumHero {
+  position: relative;
+}
+
+/* 手機版固定播放器時的佔位：播放器離開文件流後，由這塊撐住 .hero 原本的高度。
+   高度寫成 padding 的百分比（16:9 → 56.25%），是相對「容器寬度」算出來的，
+   不經過 aspect-ratio（上面說明了為什麼 .hero 不能靠 aspect-ratio）。
+   少了這塊，播放器一固定 .hero 就塌成 0，下面的縮圖會整批往上跳。 */
+.leadSpacer {
+  padding-top: 56.25%;
+}
+
+/* 側邊縮圖區：行動版就是普通的 2 欄 */
+.heroSide,
+.mediumSide {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  grid-auto-flow: row;
-  gap: 16px 12px;
-  //撐出基本高度
-  grid-auto-rows: minmax(130px, auto);
+  gap: $gap-y-mobile $gap-x-mobile;
+  min-width: 0;
 }
 
-.big,
-.medium {
-  grid-column: 1 / -1;
+/* 每段下方的整排縮圖 */
+.rowsBlock {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $gap-y-mobile $gap-x-mobile;
 }
 
-// 手機版第一則播放器：滑過頂端的哨兵（固定定位改由 JS 量測後以 inline style 套用）
+// 第一則播放器：滑過頂端的哨兵，CategoryClient 用它判斷該不該固定（只有手機版會固定）。
+// 絕對定位＋1px，不影響版面，所以桌機不必特別隱藏。
 .leadSentinel {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 1px;
+  pointer-events: none;
 }
 
 .sentinel {
@@ -165,60 +250,94 @@
   }
 
   .feed {
+    gap: $gap-y;
+  }
+
+  /* 主圖與側邊縮圖並排 */
+  .heroBlock,
+  .mediumBlock {
+    flex-direction: row;
+    gap: $gap-x;
+  }
+
+  .hero {
+    flex: 0 0 calc(75% - 4.5px); // 3 欄 + 2 欄距
+  }
+
+  /* 中圖的高度要跟右側 2×2 縮圖一致，不是自己的 16:9（16:9 比側邊那疊矮，
+     照 16:9 走會在中圖下方空一塊）。做法：內層縮圖帶 fill 絕對定位撐滿，
+     所以這一格在文件流內沒有內容，高度由同一列的 .mediumSide 決定
+     （.mediumBlock 的 align-items 預設就是 stretch）。
+
+     ::before 是高度地板：最後一段可能只剩中圖、右側沒有縮圖，少了它整格會塌成 0。
+     用 padding 的百分比（16:9 → 56.25%）而不是 aspect-ratio —— 它相對寬度解析，
+     而這一格的寬度是明寫的 flex-basis 百分比，算得準。
+
+     大圖（.hero）不套這招：它裝的是播放器，必須維持 16:9 不能裁切，
+     而且它的 16:9 本來就比側邊那 2 張高，不會留白。 */
+  .mediumHero {
+    flex: 0 0 calc(50% - 9px); // 2 欄 + 1 欄距
+
+    &::before {
+      content: "";
+      display: block;
+      padding-top: 56.25%;
+    }
+  }
+
+  /* flex: 1 1 0 → 寬度剛好是剩下的空間（= 大圖旁 1 欄 / 中圖旁 2 欄），不受內容寬度影響。
+     grid-auto-rows: 1fr（= minmax(auto, 1fr)）→ 列高均分這一列的高度，
+     但 auto 下限讓內容更高時仍會長高、不被壓扁，所以：
+       大圖旁：大圖較高 → 這裡均分大圖的高度
+       中圖旁：這裡較高 → 由這裡決定整列高度，中圖跟著撐滿
+     窄桌機（760px 出頭）標題折行多時，大圖旁這疊也可能反過來比大圖高，
+     那時大圖下方會留一小塊空白 —— 已知的取捨，要消掉就得壓縮側邊標題。 */
+  .heroSide,
+  .mediumSide {
+    flex: 1 1 0;
+    gap: $gap-y $gap-x;
+    grid-auto-rows: 1fr;
+  }
+
+  .heroSide {
+    grid-template-columns: 1fr; // 大圖旁只有 1 欄、上下 2 張
+  }
+
+  .rowsBlock {
     grid-template-columns: repeat(4, 1fr);
-    gap: 22px 18px;
-    grid-auto-rows: minmax(180px, auto);
-
-    // 前兩列（第一則播放器所跨的兩列）的最小高度直接算出來，不靠瀏覽器撐列。
-    //
-    // 第一則是 16:9 播放器（VideoPlayer 自帶 aspect-ratio），高度由它自己決定，
-    // 但它跨 2 列 —— 列軌要被撐開，得靠「把跨列項目的高度分攤回各列」這段規格。
-    // Safari 對「高度來自 aspect-ratio 的巢狀盒子」不吃這條（Chrome 會撐），
-    // 列軌只照縮圖高度算 → 播放器超出自己的格子，被第 3 列縮圖疊在上面。
-    //
-    // 算式（與 grid-template-columns / gap 綁在一起，改欄數或間距要同步改）：
-    //   內容寬 W  = min(100vw - 左右留白, 容器上限)
-    //   欄寬     = (W - 3 × 18px) / 4
-    //   大圖寬   = 3 欄 + 2 欄距 = 0.75W - 4.5px
-    //   大圖高   = 大圖寬 × 9/16 = 0.421875W - 2.53125px
-    //   單列高   = (大圖高 - 22px 列距) / 2 = 0.2109375W - 12.265625px
-    //
-    // 用 minmax(算式, auto)：窄桌機／標題多行使縮圖本身更高時仍會長高，
-    // 那種情況播放器只會在格子裡留白，不會再壓到下一列。
-    grid-template-rows: repeat(
-      2,
-      minmax(
-        calc(
-          0.2109375 *
-            min(100vw - var(--container-gutter), var(--container-max)) -
-            12.265625px
-        ),
-        auto
-      )
-    );
-  }
-
-  // 哨兵只有手機版固定播放器會用到；桌機留在流內會多撐 1px，
-  // 讓上面算好的列高剛好差 1px 對不齊，桌機直接不佔位。
-  .leadSentinel {
-    display: none;
-  }
-
-  /* 大圖：跨 3 欄 × 2 列；中圖：跨 2 欄 × 2 列。 */
-  .big {
-    grid-column: span 3;
-    grid-row: span 2;
-  }
-
-  .medium {
-    grid-column: span 2;
-    grid-row: span 2;
+    gap: $gap-y $gap-x;
   }
 }
 
 @media (max-width: 759px) {
   .wrap {
     width: min(100% - var(--container-gutter-mobile), var(--container-max));
+  }
+
+  /* 寬度明寫成 100%，而不是讓它由 align-items: stretch 推出來。
+     這一格的高度已經不靠 aspect-ratio 了，但寬度仍要是明確值：
+     內層播放器的 width: 100% 與 .leadSpacer 的 padding-top: 56.25% 都是
+     相對這一格的寬度解析的。（桌機不能加，那邊寬度是 flex-basis 的百分比） */
+  .hero,
+  .mediumHero {
+    width: 100%;
+  }
+
+  /* 第一則播放器滑過 navbar 後固定在頂端。
+     寬度與水平位置用「與 .wrap 完全相同的算式」直接寫在這裡，
+     不再由 JS 量 .hero 的 rect 寫成 inline px —— px 是某一瞬間的值，
+     視窗尺寸一變就對不上，播放器會一直維持固定寬度（Safari 響應式模式最明顯）。
+     行動版 .hero 就是滿版的 .wrap 寬度，所以這裡照抄算式即可永遠對齊：
+       width  = min(100% - 24px, 1260px)，100% 相對視窗寬（固定定位的容器塊）
+       left/right: 0 + margin auto = 水平置中，等同 .wrap 的 margin: 0 auto */
+  .leadFixed {
+    position: fixed;
+    top: var(--navbar-height);
+    right: 0;
+    left: 0;
+    z-index: 30;
+    width: min(100% - var(--container-gutter-mobile), var(--container-max));
+    margin: 0 auto;
   }
 
   .crumbWrap {
