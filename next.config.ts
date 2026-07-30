@@ -1,12 +1,10 @@
 import type { NextConfig } from "next";
 
-// 本站以 Node 伺服器服務（Cloud Run 跑 `.next/standalone` 的 server.js）。
-//
+// 本站以 Node 伺服器服務：Cloud Run 由 Buildpacks 建置，執行 `npm start`（next start）。
+// 不使用 `output: "standalone"`——那是為了自建 Docker image 而生，Buildpacks 已經把
+// node_modules 一起打包進映像，再產一份 standalone 只是重複輸出、拖慢建置。
 
 const config: NextConfig = {
-  // 產出獨立部署包（.next/standalone）：只帶必要的 node_modules 與精簡 server.js，
-  // 適合裝進 Docker image，映像更小、不必在容器內完整 npm install。
-  output: "standalone",
   images: {
     unoptimized: true, // 已全面改用原生 <img>
   },
