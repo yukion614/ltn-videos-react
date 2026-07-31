@@ -502,17 +502,24 @@ export default function Home() {
       </section>
 
       {/* 直播 */}
-      {/* <section className={styles.section}>
+      <section className={styles.section}>
         <div className={styles.wrap}>
           <SectionHeader title="直播" en="Live" />
           <div className={styles.liveGrid}>
-            <a href="#" className={styles.livePlayer}>
+            <VideoPlayer
+              src=""
+              poster={""}
+              title="藍白別再擋！台灣恐跌出美國優先名單！賴清德親上火線回應軍購、高市早苗大勝、台美關係"
+              spriteUrl=""
+              allowFullscreen
+            />
+            {/* <a href="#" className={styles.livePlayer}>
               <VideoMedia
                 title="藍白別再擋！台灣恐跌出美國優先名單！賴清德親上火線回應軍購、高市早苗大勝、台美關係"
                 tone={6}
               />
               <span className={styles.liveBadge}>LIVE</span>
-            </a>
+            </a> */}
             <div className={styles.liveInfo}>
               <span className={styles.liveStatus}>
                 <span aria-hidden="true" />
@@ -521,14 +528,14 @@ export default function Home() {
               <h3>
                 藍白別再擋！台灣恐跌出美國優先名單！賴清德親上火線回應軍購、高市早苗大勝、台美關係
               </h3>
-              <a href="#" className={styles.watchButton}>
+              {/* <a href="#" className={styles.watchButton}>
                <PlayIcon /> 
                 觀看直播
-              </a>
+              </a> */}
             </div>
           </div>
         </div>
-      </section> */}
+      </section>
       {/* 國會直播：congress-live 無資料（visible=false 或 items 為空）時整個區塊不顯示 */}
       {showCongress && (
         <section className={styles.section}>

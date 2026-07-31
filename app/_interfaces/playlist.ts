@@ -40,6 +40,20 @@ export interface PlaylistVideoItem {
   watchUrl: string;
 }
 
+//yt  直播
+export interface LiveItem {
+  id: string; // live ID
+  name: string; // live 標題
+  url: string; //影片來源（YouTube embed）
+  status: string; // 狀態文字：PLAY / OFF
+}
+
+export interface LiveResponse {
+  visible: boolean; // 是否顯示整個直播區塊
+  onplay: number | null; //目前直播中的直播 id（無則為 null）
+  items: LiveItem[]; // 直播列表
+}
+
 // 國會直播 API：congress 區塊 items[0].apiUrl（如 .../brand/api/congress-live）
 
 // 單一議程項目（每個議程帶自己的影片網址，status === "onplay" 代表直播中）
