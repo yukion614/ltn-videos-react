@@ -30,14 +30,14 @@ export function setupMock(instance: AxiosInstance) {
   // 用正規表示式而非字串 "/live"：本專案很多 API 網址是後端回的「完整網址」
   // （像 congressEntry.apiUrl），沒有經過 baseURL；字串只比對得到相對路徑，
   // 正則兩種都接得到。
-  mock.onGet(/\/live$/).reply(200, liveMock);
+  mock.onGet(/\/youtube-live$/).reply(200, liveMock);
 
   // 想測錯誤處理時，把上面那行換成：
   // mock.onGet(/\/live$/).reply(500);
   // 想測「沒有直播」時，改回 liveEmptyMock（同目錄 live.ts）
 
   // eslint-disable-next-line no-console
-  console.info("[mock] axios mock 已啟用：GET /live");
+  console.info("[mock] axios mock 已啟用：GET /youtube-live");
 
   return mock;
 }

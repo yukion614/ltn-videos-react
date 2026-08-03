@@ -11,7 +11,9 @@ export const liveMock: LiveResponse = {
     {
       id: "1",
       name: "藍白別再擋！台灣恐跌出美國優先名單！賴清德親上火線回應軍購",
-      url: "https://www.youtube.com/embed/jfKfPfyJRdk",
+      // 直播結束後會變成「無法播放存檔」，iframe 就是一片黑。畫面全黑時先確認這支還活著：
+      //   https://www.youtube.com/embed/<ID>  貼到瀏覽器，能播才是好的
+      url: "https://www.youtube.com/embed/QdPgHLBtjTc",
       status: "PLAY",
     },
   ],

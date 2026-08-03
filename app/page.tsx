@@ -14,10 +14,12 @@ import type {
   PlaylistEntry,
   CongressLiveResponse,
   CongressLiveItem,
+  LiveResponse,
 } from "./_interfaces/playlist";
 import { watchUrlToSlug } from "./_lib/videoDetail";
 import { API_BASE } from "./_lib/api";
 import { useIsMobile } from "./hooks/useIsMobile";
+import { fetchLive } from "./_lib/live";
 
 // 節目卡片：清單資訊 + 首支影片的封面與連結
 type ProgramCard = PlaylistEntry & {
@@ -118,6 +120,7 @@ export default function Home() {
   const [topicTitle, setTopicTitle] = useState("話題"); //話題標題
   const [programCards, setProgramCards] = useState<ProgramCard[]>([]); //節目
   const [programTitle, setProgramTitle] = useState("節目"); //節目區標題
+  const [live, setLive] = useState<LiveResponse | null>(null); //youtube 直播
   const [congress, setCongress] = useState<CongressLiveResponse | null>(null); //國會直播
   const basePath = API_BASE;
   // 首頁同時有 heroMobile 與桌機 .a1 兩個版位，各自掛一個 VideoPlayer。
@@ -254,6 +257,10 @@ export default function Home() {
         }
         fetchProgramCards(programSection.items ?? []).then(setProgramCards);
       }
+
+      // youtube 直播：取 live 區塊的第一份清單，依其 apiUrl 抓直播資料
+      const liveEntry = listData.sections.youtubeLive?.items[0];
+      if (liveEntry) fetchLive().then(setLive);
 
       // 國會直播：取 congress 區塊的第一份清單，依其 apiUrl 抓議程資料
       const congressEntry = listData.sections.congress?.items[0];
@@ -502,40 +509,50 @@ export default function Home() {
       </section>
 
       {/* 直播 */}
-      <section className={styles.section}>
-        <div className={styles.wrap}>
-          <SectionHeader title="直播" en="Live" />
-          <div className={styles.liveGrid}>
-            <VideoPlayer
-              src=""
-              poster={""}
-              title="藍白別再擋！台灣恐跌出美國優先名單！賴清德親上火線回應軍購、高市早苗大勝、台美關係"
-              spriteUrl=""
-              allowFullscreen
-            />
-            {/* <a href="#" className={styles.livePlayer}>
+      {live && live.visible && live.items.length > 0 && (
+        <section className={styles.section}>
+          <div className={styles.wrap}>
+            <SectionHeader title="直播" en="Live" />
+            <div className={styles.liveGrid}>
+              {/* iframe 外面要包一層 .livePlayer：.liveGrid 有 align-items: center，
+                  iframe 直接當 grid item 時算不到高度（同國會直播的 .parliamentPlayer） */}
+              <div className={styles.livePlayer}>
+                <iframe
+                  key={live.items[0].url}
+                  className={styles.parliamentFrame}
+                  // autoplay 必須配 mute，否則瀏覽器會擋掉自動播放。
+                  src={`${live.items[0].url}${live.items[0].url.includes("?") ? "&" : "?"}autoplay=1&mute=1&fs=1&playsinline=1`}
+                  title={live.items[0].name}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                  allowFullScreen
+                />
+              </div>
+              {/* <VideoPlayer
+                src=""
+                poster={""}
+                title="藍白別再擋！台灣恐跌出美國優先名單！賴清德親上火線回應軍購、高市早苗大勝、台美關係"
+                spriteUrl=""
+                allowFullscreen
+              /> */}
+              {/* <a href="#" className={styles.livePlayer}>
               <VideoMedia
                 title="藍白別再擋！台灣恐跌出美國優先名單！賴清德親上火線回應軍購、高市早苗大勝、台美關係"
                 tone={6}
               />
               <span className={styles.liveBadge}>LIVE</span>
             </a> */}
-            <div className={styles.liveInfo}>
-              <span className={styles.liveStatus}>
-                <span aria-hidden="true" />
-                LIVE · 直播進行中
-              </span>
-              <h3>
-                藍白別再擋！台灣恐跌出美國優先名單！賴清德親上火線回應軍購、高市早苗大勝、台美關係
-              </h3>
-              {/* <a href="#" className={styles.watchButton}>
-               <PlayIcon /> 
-                觀看直播
-              </a> */}
+              <div className={styles.liveInfo}>
+                <span className={styles.liveStatus}>
+                  <span aria-hidden="true" />
+                  LIVE · 直播進行中
+                </span>
+                <h3>{live.items[0].name}</h3>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
       {/* 國會直播：congress-live 無資料（visible=false 或 items 為空）時整個區塊不顯示 */}
       {showCongress && (
         <section className={styles.section}>
