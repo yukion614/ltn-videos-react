@@ -413,6 +413,39 @@ export default function Home() {
           </div>
         ))} */}
       </section>
+
+      {/* 直播 */}
+      {live && live.visible && live.items.length > 0 && (
+        <section className={styles.section}>
+          <div className={styles.wrap}>
+            <SectionHeader title="直播" en="Live" />
+            <div className={styles.liveGrid}>
+              {/* iframe 外面要包一層 .livePlayer：.liveGrid 有 align-items: center，
+                  iframe 直接當 grid item 時算不到高度（同國會直播的 .parliamentPlayer） */}
+              <div className={styles.livePlayer}>
+                <iframe
+                  key={live.items[0].url}
+                  className={styles.parliamentFrame}
+                  // autoplay 必須配 mute，否則瀏覽器會擋掉自動播放。
+                  src={`${live.items[0].url}${live.items[0].url.includes("?") ? "&" : "?"}autoplay=1&mute=1&fs=1&playsinline=1`}
+                  title={live.items[0].name}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                  allowFullScreen
+                />
+              </div>
+
+              <div className={styles.liveInfo}>
+                <span className={styles.liveStatus}>
+                  <span aria-hidden="true" />
+                  LIVE · 直播進行中
+                </span>
+                <h3>{live.items[0].name}</h3>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* 話題 */}
 
       <section className={styles.section}>
@@ -507,51 +540,6 @@ export default function Home() {
           )}
         </div>
       </section>
-
-      {/* 直播 */}
-      {live && live.visible && live.items.length > 0 && (
-        <section className={styles.section}>
-          <div className={styles.wrap}>
-            <SectionHeader title="直播" en="Live" />
-            <div className={styles.liveGrid}>
-              {/* iframe 外面要包一層 .livePlayer：.liveGrid 有 align-items: center，
-                  iframe 直接當 grid item 時算不到高度（同國會直播的 .parliamentPlayer） */}
-              <div className={styles.livePlayer}>
-                <iframe
-                  key={live.items[0].url}
-                  className={styles.parliamentFrame}
-                  // autoplay 必須配 mute，否則瀏覽器會擋掉自動播放。
-                  src={`${live.items[0].url}${live.items[0].url.includes("?") ? "&" : "?"}autoplay=1&mute=1&fs=1&playsinline=1`}
-                  title={live.items[0].name}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                  allowFullScreen
-                />
-              </div>
-              {/* <VideoPlayer
-                src=""
-                poster={""}
-                title="藍白別再擋！台灣恐跌出美國優先名單！賴清德親上火線回應軍購、高市早苗大勝、台美關係"
-                spriteUrl=""
-                allowFullscreen
-              /> */}
-              {/* <a href="#" className={styles.livePlayer}>
-              <VideoMedia
-                title="藍白別再擋！台灣恐跌出美國優先名單！賴清德親上火線回應軍購、高市早苗大勝、台美關係"
-                tone={6}
-              />
-              <span className={styles.liveBadge}>LIVE</span>
-            </a> */}
-              <div className={styles.liveInfo}>
-                <span className={styles.liveStatus}>
-                  <span aria-hidden="true" />
-                  LIVE · 直播進行中
-                </span>
-                <h3>{live.items[0].name}</h3>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* 國會直播：congress-live 無資料（visible=false 或 items 為空）時整個區塊不顯示 */}
       {showCongress && (
