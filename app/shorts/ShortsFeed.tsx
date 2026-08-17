@@ -30,6 +30,50 @@ function canPlayNativeHls() {
   );
 }
 
+// 從 HLS 主清單挑出 BANDWIDTH 最小的那條子清單。
+// 預熱只是為了「開頭能立刻播」，抓最低畫質即可：檔案最小、最省流量，
+// 真正播放時 hls.js／原生播放器仍會依當下網速自行選擇畫質。
+// 傳進來的若不是主清單（沒有 STREAM-INF）就回 null，由呼叫端當成媒體清單處理。
+function pickLowestVariant(m3u8: string): string | null {
+  const lines = m3u8.split("\n").map((l) => l.trim());
+  let best: { bandwidth: number; uri: string } | null = null;
+  for (let i = 0; i < lines.length; i++) {
+    if (!lines[i].startsWith("#EXT-X-STREAM-INF:")) continue;
+    // URI 固定寫在 STREAM-INF 標籤的下一行
+    const uri = lines[i + 1];
+    // 純防呆：規格保證下一行是 URI，正常不會走到這裡。
+    // 但檔案若被截斷或格式有異，沒擋掉就會把下一個 #EXT 標籤當網址送去 fetch。
+    if (!uri || uri.startsWith("#")) continue;
+    const bandwidth = Number(lines[i].match(/BANDWIDTH=(\d+)/)?.[1] ?? 0);
+    if (!best || bandwidth < best.bandwidth) best = { bandwidth, uri };
+  }
+  return best?.uri ?? null;
+}
+
+// 媒體清單裡的第一個分段檔（第一個非註解、非空白的行）
+function firstSegment(m3u8: string): string | null {
+  for (const raw of m3u8.split("\n")) {
+    const line = raw.trim();
+    if (line && !line.startsWith("#")) return line;
+  }
+  return null;
+}
+
+// 先把下兩支影片的「第一段」下載起來，加入遊覽器快取
+async function warmUpHls(masterUrl: string): Promise<void> {
+  const master = await (await fetch(masterUrl)).text();
+  const variant = pickLowestVariant(master);
+  // 有子清單就往下一層拿；沒有代表這份已經是片段清單，直接用它
+  const playlistUrl = variant
+    ? new URL(variant, masterUrl).toString()
+    : masterUrl;
+  const playlist = variant ? await (await fetch(playlistUrl)).text() : master;
+  const segment = firstSegment(playlist);
+  if (!segment) return;
+  // 抓下來不做任何事，純粹是為了讓瀏覽器把它存進快取
+  await fetch(new URL(segment, playlistUrl).toString());
+}
+
 const basePath = API_BASE;
 
 async function fetchShorts(
@@ -170,6 +214,9 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
   }
   // 非原生 HLS 瀏覽器（Chrome/Firefox/Android）用的 hls.js 實例，換來源／卸載時要銷毀
   const hlsRef = useRef<{ destroy: () => void } | null>(null);
+
+  // 已經預熱過的來源，避免同一支重複抓
+  const warmedRef = useRef<Set<string>>(new Set());
 
   // 目前這則的掛載點：新的 active slide 的掛載 div 一出現，就把共用 <video> 搬進去。
   // 只在 node 非 null 時採用，避免舊 slide 卸下 ref（傳 null）時把記錄清掉；
@@ -324,7 +371,8 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
             video.muted = true;
             setMuted(true); // 同步回按鈕圖示，維持狀態一致
             const retry = video.play();
-            if (retry && typeof retry.catch === "function") retry.catch(() => {});
+            if (retry && typeof retry.catch === "function")
+              retry.catch(() => {});
           }
         });
       }
@@ -370,6 +418,55 @@ export default function ShortsFeed({ initialId }: { initialId?: string }) {
     // muted/playing 只作為起播的初始值，變動由下方各自的 effect 同步
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSrc]);
+
+  // 預抓接下來兩則的影片開頭。
+  // 滑動有 480ms 的節流鎖。
+  // 等目前這則能播了才開始：預熱跟播放共用同一條頻寬，搶在前面反而讓眼前這則更卡。
+  useEffect(() => {
+    const video = videoElRef.current;
+    if (!video) return;
+
+    // 非 HLS 的來源不預熱：那會是單一影片檔，用 fetch 抓等於整支下載一遍
+    const targets = [items[index + 1], items[index + 2]]
+      .map((s) => s?.hlsUrl)
+      .filter((u): u is string => !!u && isHlsSource(u));
+    if (targets.length === 0) return;
+
+    let cancelled = false;
+
+    const start = async () => {
+      // 一支抓完再抓下一支（下一則優先），兩支同時抓會互相拖慢
+      for (const url of targets) {
+        if (cancelled) return;
+        if (warmedRef.current.has(url)) continue;
+        warmedRef.current.add(url);
+        try {
+          await warmUpHls(url);
+        } catch {
+          // 預熱失敗完全不影響播放（頂多滑過去時照舊現載）；
+          // 把記錄清掉，讓之後切換時還有機會再試一次
+          warmedRef.current.delete(url);
+        }
+      }
+    };
+
+    // readyState >= 3（HAVE_FUTURE_DATA）表示目前這則已經有得播了
+    if (video.readyState >= 3) {
+      start();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    // 還沒就緒就等 canplay；另外壓一個上限，避免這則載不出來時預熱永遠不啟動
+    video.addEventListener("canplay", start, { once: true });
+    const timer = setTimeout(start, 3000);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      video.removeEventListener("canplay", start);
+    };
+  }, [index, items]);
 
   // 元件卸載時銷毀 hls.js 實例（換片不銷毀由上方 effect 處理）
   useEffect(() => {
