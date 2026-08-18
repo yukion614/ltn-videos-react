@@ -1,0 +1,25 @@
+.sectionHeader {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 11px;
+  margin-bottom: 14px;
+
+  &::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background: linear-gradient(to right, #c2c4cc, #c2c4cc 72%, transparent);
+  }
+}
+
+@media (max-width: 759px) {
+  .sectionHeader {
+    flex-wrap: wrap;
+    align-items: baseline;
+  }
+}
