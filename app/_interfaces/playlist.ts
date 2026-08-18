@@ -29,6 +29,13 @@ export interface ProgramListResponse {
   items: PlaylistEntry[]; // 所有節目播放清單
 }
 
+// playlist-list/topic 回傳結構
+export interface TopicListResponse {
+  title: string;
+  updatedAt: string;
+  items: PlaylistEntry[];
+}
+
 // 播放清單影片項目 API：https://data.ltn.com.tw/brand/api/playlist-items/{id}/{page}
 
 export interface PlaylistVideoItem {

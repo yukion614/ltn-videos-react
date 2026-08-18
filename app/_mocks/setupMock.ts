@@ -5,10 +5,13 @@
 //   2. 只攔「後端還沒好」的路徑，其餘一律 passThrough() 打真的 API，
 //      不會影響現有那些用原生 fetch 的區塊。
 //   3. 每個 mock 都給一點延遲，才看得出 loading 狀態。
+//
+// ⚠️ 只攔得到「走 http（axios instance）的請求」。用原生 fetch 打的 API 不會被攔，
+//    要 mock 的呼叫端請先改成 http.get（見 app/_lib/topic.ts）。
 import MockAdapter from "axios-mock-adapter";
 import type { AxiosInstance } from "axios";
 
-import { liveMock } from "./live";
+import { liveMock, topicMock, topicTwiceMock, topicPlaylistMock } from "./live";
 
 // 讀 .env.*。Next 會在 build 時把這個字串直接內嵌，關掉時整段判斷會被移除。
 const MOCK_ENABLED = process.env.NEXT_PUBLIC_API_MOCK === "true";
@@ -21,23 +24,23 @@ export function setupMock(instance: AxiosInstance) {
 
   const mock = new MockAdapter(instance, {
     delayResponse: DELAY,
-    // 沒對上任何規則的請求 → 照樣送到真的 API，不要噴 404
+    // 有寫 Mock 規則的 API $\rightarrow$ 回傳你設定的假資料（Mock）。
+    // 沒寫 Mock 規則的 API $\rightarrow$ 透過 passthrough 直接連到真實的伺服器抓真資料。
     onNoMatch: "passthrough",
   });
 
-  // GET 任何結尾是 /live 的網址 → 直接回 liveMock，不出網路。
-  //
-  // 用正規表示式而非字串 "/live"：本專案很多 API 網址是後端回的「完整網址」
-  // （像 congressEntry.apiUrl），沒有經過 baseURL；字串只比對得到相對路徑，
-  // 正則兩種都接得到。
   mock.onGet(/\/youtube-live$/).reply(200, liveMock);
+  mock.onGet(/\/playlist-list\/topic$/).reply(200, topicMock);
+  // mock.onGet(/\/playlist-list\/topic$/).reply(200, topicTwiceMock);
+  mock.onGet(/\/playlist-items\/[^/]+\/\d+$/).reply(200, topicPlaylistMock);
 
   // 想測錯誤處理時，把上面那行換成：
-  // mock.onGet(/\/live$/).reply(500);
-  // 想測「沒有直播」時，改回 liveEmptyMock（同目錄 live.ts）
+  // mock.onGet(/\/playlist-list\/topic$/).reply(500);
 
   // eslint-disable-next-line no-console
-  console.info("[mock] axios mock 已啟用：GET /youtube-live");
+  console.info(
+    "[mock] axios mock 已啟用：GET /youtube-live、/playlist-list/topic、/playlist-items/*",
+  );
 
   return mock;
 }
