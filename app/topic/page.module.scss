@@ -1,0 +1,311 @@
+.page {
+  // svh＝工具列展開時的視窗高度。用 vh 的話 Safari 取的是「網址列收起」的大視窗，
+  // 工具列還在畫面上時文件會比可視區高出一截，滾到底會多一塊空白。
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: 24px 0 48px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+}
+
+.wrap {
+  width: min(100% - var(--container-gutter), var(--container-max));
+  margin: 0 auto;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  white-space: nowrap;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  padding: 18px 0 26px;
+}
+
+.sectionHeader {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 11px;
+  margin-bottom: 14px;
+
+  &::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background: linear-gradient(to right, #c2c4cc, #c2c4cc 72%, transparent);
+  }
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+
+  &::before {
+    content: "";
+    flex: none;
+    width: 4px;
+    height: 1em;
+    border-radius: 2px;
+    background: var(--red);
+  }
+
+  &:hover,
+  &:focus-visible {
+    color: var(--red);
+  }
+}
+
+.more {
+  margin-left: auto;
+  color: var(--text-mute);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--red);
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.card {
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    .cardTitle {
+      color: var(--red);
+    }
+  }
+}
+
+.media {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  background: #dfe1e8;
+
+  img {
+    object-fit: cover;
+    transition: transform 0.2s ease;
+  }
+}
+
+.card:hover .media img,
+.card:focus-visible .media img {
+  transform: scale(1.035);
+}
+
+.cardTitleWrap {
+  display: block;
+}
+
+.cardTitle {
+  display: -webkit-box;
+  margin-top: 9px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  text-wrap: pretty;
+  transition: color 0.15s ease;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.fallbackMedia {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: linear-gradient(135deg, var(--thumb-a), var(--thumb-b));
+  color: #fff;
+  isolation: isolate;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(140deg, rgba(255, 255, 255, 0.24), transparent 42%),
+      linear-gradient(315deg, rgba(0, 0, 0, 0.22), transparent 48%),
+      repeating-linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.1) 0 2px,
+        transparent 2px 18px
+      );
+  }
+
+  span {
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.3;
+    text-align: center;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+  }
+}
+
+.tone0 {
+  --thumb-a: #1d3557;
+  --thumb-b: #e63946;
+}
+
+.tone1 {
+  --thumb-a: #4a5568;
+  --thumb-b: #e2231a;
+}
+
+.tone2 {
+  --thumb-a: #164e63;
+  --thumb-b: #f59e0b;
+}
+
+.tone3 {
+  --thumb-a: #2f3a4a;
+  --thumb-b: #22a06b;
+}
+
+.tone4 {
+  --thumb-a: #6b2d5c;
+  --thumb-b: #e85d04;
+}
+
+.tone5 {
+  --thumb-a: #263238;
+  --thumb-b: #3b82f6;
+}
+
+.tone6 {
+  --thumb-a: #3d2c2e;
+  --thumb-b: #d90429;
+}
+
+.tone7 {
+  --thumb-a: #1f2937;
+  --thumb-b: #ffd400;
+}
+
+@media (min-width: 760px) {
+  .content {
+    gap: 34px;
+    padding: 22px 0 36px;
+  }
+
+  .name {
+    font-size: 22px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 26px 18px;
+  }
+
+  .cardTitle {
+    font-size: 14.5px;
+  }
+}
+
+@media (max-width: 759px) {
+  .page {
+    padding-top: 18px;
+  }
+
+  .wrap {
+    width: min(100% - var(--container-gutter-mobile), var(--container-max));
+  }
+
+  .sectionHeader {
+    flex-wrap: wrap;
+    align-items: baseline;
+  }
+
+  .name {
+    font-size: 20px;
+  }
+
+  .card {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #111;
+  }
+
+  .media {
+    border-radius: 8px;
+
+    &::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 62%;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.88));
+      pointer-events: none;
+    }
+  }
+
+  .cardTitleWrap {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    padding: 0 12px 11px;
+    pointer-events: none;
+  }
+
+  .cardTitle {
+    margin-top: 0;
+    color: #fff;
+    font-weight: 800;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+  }
+
+  .card:hover,
+  .card:focus-visible {
+    .cardTitle {
+      color: #fff;
+    }
+  }
+}
