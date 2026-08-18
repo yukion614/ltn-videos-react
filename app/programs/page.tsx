@@ -11,6 +11,7 @@ import type {
 import styles from "./page.module.scss";
 import { watchUrlToSlug } from "../_lib/videoDetail";
 import { API_BASE } from "../_lib/api";
+import SectionHeader from "../_components/SectionHeader/SectionHeader";
 
 const basePath = API_BASE;
 
@@ -42,26 +43,10 @@ function toProgramHref(slug: string) {
   return slug ? `/programs/${slug}` : "/programs";
 }
 
-// 單支影片連結；沒有對應 slug 時退回不分類的影片頁。
-// videoKey 應為 watchUrl 內的 slug（詳情 API 的 key），不是數字 id
 function toVideoHref(slug: string, videoKey: string | number) {
   return slug
     ? `/programs/${slug}/video/${videoKey}`
     : `/programs/video/${videoKey}`;
-}
-
-function SectionHeader({ name, href }: { name: string; href: string }) {
-  return (
-    <div className={styles.sectionHeader}>
-      {/* 改用原生 <a>：點擊走整頁重載，不會發出 Next.js 的 ?_rsc= 導覽請求 */}
-      <a className={styles.name} href={href}>
-        {name}
-      </a>
-      <a className={styles.more} href={href}>
-        看更多
-      </a>
-    </div>
-  );
 }
 
 function ProgramFallback({
