@@ -14,13 +14,8 @@ import { buildSiteIcons, SITE_SHARE_IMAGE } from "./siteIcons";
 
 const basePath = API_BASE;
 
-/**
- * 取得「話題」第一支影片的 watchUrl。
- * 1. playlist-list/topic → 取第一個清單的 apiUrl
- * 2. 該 apiUrl(playlist-items) → 取第一支影片的 watchUrl
- * 失敗時回傳 null。
- */
-export async function getTopicFirstWatchUrl(): Promise<string | null> {
+//取得影片Id
+export async function getTopicFirstVideoId(): Promise<number | null> {
   try {
     const listRes = await fetch(`${basePath}/playlist-list/topic`, {
       next: { revalidate: LIST_REVALIDATE },
@@ -35,7 +30,7 @@ export async function getTopicFirstWatchUrl(): Promise<string | null> {
     });
     if (!itemsRes.ok) return null;
     const itemsData = (await itemsRes.json()) as PlaylistItemsResponse;
-    return itemsData.items?.[0]?.watchUrl ?? null;
+    return itemsData.items?.[0]?.id ?? null;
   } catch {
     return null;
   }
