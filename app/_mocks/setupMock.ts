@@ -11,7 +11,14 @@
 import MockAdapter from "axios-mock-adapter";
 import type { AxiosInstance } from "axios";
 
-import { liveMock, topicMock, topicTwiceMock, topicPlaylistMock } from "./live";
+import {
+  liveMock,
+  topicMock,
+  topicTwiceMock,
+  topicPlaylistMock,
+  topicPlaylistBaseballMock,
+  homeListMock,
+} from "./live";
 
 // 讀 .env.*。Next 會在 build 時把這個字串直接內嵌，關掉時整段判斷會被移除。
 const MOCK_ENABLED = process.env.NEXT_PUBLIC_API_MOCK === "true";
@@ -30,16 +37,26 @@ export function setupMock(instance: AxiosInstance) {
   });
 
   mock.onGet(/\/youtube-live$/).reply(200, liveMock);
-  mock.onGet(/\/playlist-list\/topic$/).reply(200, topicMock);
-  // mock.onGet(/\/playlist-list\/topic$/).reply(200, topicTwiceMock);
-  mock.onGet(/\/playlist-items\/[^/]+\/\d+$/).reply(200, topicPlaylistMock);
+  mock.onGet(/\/playlist-list\/home$/).reply(200, homeListMock);
+  // mock.onGet(/\/playlist-list\/topic$/).reply(200, topicMock);
+  mock.onGet(/\/playlist-list\/topic$/).reply(200, topicTwiceMock);
+  // playlist-items 只攔「後端還沒有的那兩份話題清單」，各自回自己的假資料，
+  // /topic/[category] 才看得出各話題吃到自己那份。
+  // ⚠️ 不要用 /playlist-items\/[^/]+\/\d+/ 這種泛用規則：首頁的影音精選、Shorts、節目
+  //    也都打 playlist-items，全攔下來會讓它們一起變成話題的假資料。沒列到的照樣 passthrough。
+  mock
+    .onGet(/\/playlist-items\/379323096a3df27dd90876\/\d+$/)
+    .reply(200, topicPlaylistMock);
+  mock
+    .onGet(/\/playlist-items\/379323096a3df27dd90877\/\d+$/)
+    .reply(200, topicPlaylistBaseballMock);
 
   // 想測錯誤處理時，把上面那行換成：
   // mock.onGet(/\/playlist-list\/topic$/).reply(500);
 
   // eslint-disable-next-line no-console
   console.info(
-    "[mock] axios mock 已啟用：GET /youtube-live、/playlist-list/topic、/playlist-items/*",
+    "[mock] axios mock 已啟用：GET /youtube-live、/playlist-list/home、/playlist-list/topic、/playlist-items/*",
   );
 
   return mock;

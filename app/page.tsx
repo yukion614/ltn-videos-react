@@ -8,8 +8,6 @@ import type { ShortsRailItem } from "./_interfaces/shorts";
 import type { VideoListItem } from "./_interfaces/videoArticle";
 import type { BrandVideoResponse } from "./_interfaces/BrandVideo";
 import type {
-  PlaylistListResponse,
-  PlaylistItemsResponse,
   PlaylistVideoItem,
   PlaylistEntry,
   CongressLiveResponse,
@@ -20,6 +18,8 @@ import { watchUrlToSlug } from "./_lib/videoDetail";
 import { API_BASE } from "./_lib/api";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { fetchLive } from "./_lib/live";
+import { fetchHomeList } from "./_lib/home";
+import { fetchPlaylistItems as fetchPlaylistItemsApi } from "./_lib/topic";
 
 // 節目卡片：清單資訊 + 首支影片的封面與連結
 type ProgramCard = PlaylistEntry & {
@@ -112,12 +112,87 @@ function VideoMedia({
   );
 }
 
+// 話題區塊：清單資訊 + 話題頁路由用的 slug + 該清單的影片
+type TopicCard = PlaylistEntry & {
+  slug: string;
+  videos: PlaylistVideoItem[];
+};
+
+// 話題頁路由參數：後端 entry 自帶 key，就是 /topic/[category] 的參數；沒有 key 才退回數字 id
+function toTopicSlug(entry: PlaylistEntry) {
+  return entry.key || (entry.id != null ? String(entry.id) : "");
+}
+
+function toTopicHref(slug: string) {
+  return slug ? `/topic/${slug}` : "/topic";
+}
+
+// 影片頁路由是 /topic/{category}/video/{id}（見 app/topic/[category]/video/[id]）。
+// 沒有話題 slug 就退回話題列表頁，不要組出不存在的網址
+function toTopicVideoHref(slug: string, video: PlaylistVideoItem) {
+  const videoKey = watchUrlToSlug(video.watchUrl) ?? video.id;
+  return slug ? `/topic/${slug}/video/${videoKey}` : "/topic";
+}
+
+// 單一話題區塊：左邊一支大的 + 右邊四支列表。videos 為空時整塊出骨架（載入中）
+function TopicBlock({ topic }: { topic: TopicCard }) {
+  const [lead, ...rest] = topic.videos;
+
+  return (
+    <section className={styles.section}>
+      <div className={styles.wrap}>
+        <SectionHeader
+          category="話題"
+          title={topic.title}
+          // en="Topic"
+          more="更多影片 ›"
+          moreUrl={toTopicHref(topic.slug)}
+        />
+
+        <div className={styles.topicGrid}>
+          {lead ? (
+            <VideoThumbnail
+              isLoaded={true}
+              variant={"overlay"}
+              title={lead.title}
+              src={lead.thumbnailUrl}
+              slug={toTopicVideoHref(topic.slug, lead)}
+              alt={lead.title}
+            />
+          ) : (
+            <VideoThumbnail isLoaded={false} variant={"overlay"} />
+          )}
+
+          <div className={styles.topicList}>
+            {lead
+              ? rest
+                  .slice(0, 4)
+                  .map((video) => (
+                    <VideoThumbnail
+                      key={video.id}
+                      isLoaded={true}
+                      variant={"row"}
+                      title={video.title}
+                      src={video.thumbnailUrl}
+                      slug={toTopicVideoHref(topic.slug, video)}
+                      alt={video.title}
+                    />
+                  ))
+              : Array.from({ length: 4 }).map((_, index) => (
+                  <VideoThumbnail key={index} isLoaded={false} variant={"row"} />
+                ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   const [mainVideos, setMainVideos] = useState<VideoListItem[]>([]); //mainVedios
   const [leadVideo, setLeadVideo] = useState<number | 0>(0); //預設第一隻影片
   const [shorts, setShorts] = useState<ShortsRailItem[]>([]); //shorts
-  const [topicVideos, setTopicVideos] = useState<PlaylistVideoItem[]>([]); //話題影片
-  const [topicTitle, setTopicTitle] = useState("話題"); //話題標題
+  const [topicSections, setTopicSections] = useState<TopicCard[]>([]); //話題（可能多份清單）
   const [programCards, setProgramCards] = useState<ProgramCard[]>([]); //節目
   const [programTitle, setProgramTitle] = useState("節目"); //節目區標題
   const [live, setLive] = useState<LiveResponse | null>(null); //youtube 直播
@@ -140,18 +215,14 @@ export default function Home() {
   // 只有後端標記 visible 且有議程時才顯示整個國會直播區塊
   const showCongress = Boolean(congress?.visible) && agenda.length > 0;
 
-  // 抓首頁播放清單列表（首頁所有區塊的入口）
-  async function fetchPlaylistList() {
-    const res = await fetch(`${basePath}/playlist-list/home`);
-    const data: PlaylistListResponse = await res.json();
-    return data;
-  }
-
   // 取得某份清單的影片項目
+  // 走 _lib/topic 的 http（axios instance）版本，理由有二：
+  //  1. 原生 fetch 攔不到 _mocks/setupMock 的假資料，後端還沒好的清單永遠是空的
+  //  2. 原生 fetch 遇到 404 不會 throw，但接著 res.json() 會炸；這裡由 lib 統一 try/catch
+  //     回 null，單一清單掛掉不會讓 Promise.all 整批 reject、把區塊卡在骨架
   async function fetchPlaylistItems(apiUrl: string) {
-    const res = await fetch(apiUrl);
-    const data: PlaylistItemsResponse = await res.json();
-    return data.items;
+    const data = await fetchPlaylistItemsApi(apiUrl);
+    return data?.items ?? [];
   }
 
   // 「影音精選」主播放器：取前 limit 隻並補上 hlsUrl（播放器需要）
@@ -213,6 +284,19 @@ export default function Home() {
     );
   }
 
+  // 話題卡：topic 區塊底下每份清單各自抓自己的影片
+  async function fetchTopicSections(
+    entries: PlaylistEntry[],
+  ): Promise<TopicCard[]> {
+    return Promise.all(
+      entries.map(async (entry) => ({
+        ...entry,
+        slug: toTopicSlug(entry),
+        videos: await fetchPlaylistItems(entry.apiUrl),
+      })),
+    );
+  }
+
   // 節目卡：每份清單用首支影片當封面
   async function fetchProgramCards(entries: PlaylistEntry[]) {
     return Promise.all(
@@ -229,18 +313,20 @@ export default function Home() {
 
   useEffect(() => {
     // 首頁所有區塊都由這一支 playlist-list/home 派生，不再各自打自己的清單 API
-    fetchPlaylistList().then((listData) => {
+    fetchHomeList().then((listData) => {
+      // 清單入口拿不到就整頁維持空狀態（各區塊自己的 fallback 已在下方 render 處理）
+      if (!listData) return;
+
       // 影音精選：取 main 區塊的第一份清單
       const featured = listData.sections.main?.items[0];
       if (featured) {
         fetchFeaturedVideos(featured.apiUrl).then(setMainVideos);
       }
 
-      // 話題：取 topic 區塊的第一份清單
-      const topicEntry = listData.sections.topic?.items[0];
-      if (topicEntry) {
-        setTopicTitle(topicEntry.title);
-        fetchPlaylistItems(topicEntry.apiUrl).then(setTopicVideos);
+      // 話題：topic 區塊底下有幾份清單就渲染幾塊
+      const topicEntries = listData.sections.topic?.items ?? [];
+      if (topicEntries.length > 0) {
+        fetchTopicSections(topicEntries).then(setTopicSections);
       }
 
       // 短影音：取 shorts 區塊的第一份清單
@@ -446,59 +532,16 @@ export default function Home() {
         </section>
       )}
 
-      {/* 話題 */}
-
-      <section className={styles.section}>
-        <div className={styles.wrap}>
-          <SectionHeader
-            category="話題"
-            title={topicTitle}
-            // en="Topic"
-            more="更多影片 ›"
-            moreUrl="/topic"
-          />
-
-          <div className={styles.topicGrid}>
-            {topicVideos.length !== 0 ? (
-              <VideoThumbnail
-                isLoaded={true}
-                variant={"overlay"}
-                title={topicVideos[0].title}
-                src={topicVideos[0].thumbnailUrl}
-                slug={`/topic/video/${watchUrlToSlug(topicVideos[0].watchUrl) ?? topicVideos[0].id}`}
-                alt={topicVideos[0].title}
-              />
-            ) : (
-              <VideoThumbnail isLoaded={false} variant={"overlay"} />
-            )}
-            {topicVideos.length !== 0 ? (
-              <div className={styles.topicList}>
-                {topicVideos.slice(1, 5).map((video) => (
-                  <VideoThumbnail
-                    key={video.id}
-                    isLoaded={true}
-                    variant={"row"}
-                    title={video.title}
-                    src={video.thumbnailUrl}
-                    slug={`/topic/video/${watchUrlToSlug(video.watchUrl) ?? video.id}`}
-                    alt={video.title}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className={styles.topicList}>
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <VideoThumbnail
-                    key={index}
-                    isLoaded={false}
-                    variant={"row"}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+      {/* 話題：後端 topic 區塊有幾份清單就出幾塊；還沒載完先出一塊骨架 */}
+      {topicSections.length !== 0 ? (
+        topicSections.map((topic) => (
+          <TopicBlock key={topic.id ?? topic.title} topic={topic} />
+        ))
+      ) : (
+        <TopicBlock
+          topic={{ title: "話題", apiUrl: "", slug: "", videos: [] }}
+        />
+      )}
 
       {/*短影音 shorts：載入中顯示提示，載入完但為空則整段隱藏 */}
       <section className={styles.section}>
