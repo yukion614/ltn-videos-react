@@ -17,9 +17,12 @@ const basePath = API_BASE;
 //取得影片Id
 export async function getTopicFirstVideoId(): Promise<number | null> {
   try {
-    const listRes = await fetch(`${basePath}/playlist-list/topic`, {
-      next: { revalidate: LIST_REVALIDATE },
-    });
+    const listRes = await fetch(
+      `${basePath}${process.env.NEXT_PUBLIC_TOPIC_PLAYLIST_PATH || "/playlist-list/topic"}`,
+      {
+        next: { revalidate: LIST_REVALIDATE },
+      },
+    );
     if (!listRes.ok) return null;
     const listData = (await listRes.json()) as ProgramListResponse;
     const apiUrl = listData.items?.[0]?.apiUrl;

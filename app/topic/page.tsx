@@ -73,6 +73,7 @@ async function getLeadVideo(entry: PlaylistEntry) {
 }
 
 const getTopicPageData = cache(async (): Promise<TopicPageData> => {
+  //判斷資料筆數，決定怎樣抓取後續資料。
   const list = await fetchTopicList();
   const entries = list?.items ?? [];
 

@@ -11,7 +11,10 @@ import { http } from "./http";
 // GET /playlist-list/topic → 話題清單（每筆帶自己的 playlist-items apiUrl）
 export async function fetchTopicList(): Promise<TopicListResponse | null> {
   try {
-    const res = await http.get<TopicListResponse>("/playlist-list/topic");
+    // 路徑可用環境變數覆寫（測試新清單用，例如 /playlist-list/topic2），沒設就走正式路徑
+    const res = await http.get<TopicListResponse>(
+      process.env.NEXT_PUBLIC_TOPIC_PLAYLIST_PATH || "/playlist-list/topic",
+    );
     return res.data;
   } catch {
     // 拿不到就讓呼叫端顯示空狀態，不要整頁掛掉
