@@ -39,12 +39,18 @@ function SectionHeader({
   en,
   more,
   moreUrl,
+  barColor = "var(--red)",
+  titleColor,
 }: {
   category?: string;
   title: string;
   en?: string;
   more?: string;
   moreUrl?: string;
+  // 標題左邊那條直線的顏色。多話題時外層已有紅色大標，各塊改灰色不搶焦點
+  barColor?: string;
+  // 標題文字顏色；不給就沿用 CSS 的預設色
+  titleColor?: string;
 }) {
   return (
     <div
@@ -69,7 +75,7 @@ function SectionHeader({
           style={{
             display: "inline-block",
             width: "4px",
-            background: "#e2231a",
+            background: barColor,
             borderRadius: "2px",
             alignSelf: "stretch", // 紅線自動撐滿標題高度，標題多高紅線就多長
             minHeight: "24px", // 最矮也有 24px，避免標題很小時紅線太短
@@ -77,7 +83,12 @@ function SectionHeader({
         />
       )}
 
-      <h3 className="mediaTitle">{title}</h3>
+      <h3
+        className="mediaTitle"
+        style={titleColor ? { color: titleColor } : undefined}
+      >
+        {title}
+      </h3>
       {en ? <span> {en} </span> : null}
 
       {/* 更多 */}
@@ -135,18 +146,34 @@ function toTopicVideoHref(slug: string, video: PlaylistVideoItem) {
 }
 
 // 單一話題區塊：左邊一支大的 + 右邊四支列表。videos 為空時整塊出骨架（載入中）
-function TopicBlock({ topic }: { topic: TopicCard }) {
+// showCategory：是否在標題前掛「話題」紅標。多話題時外層已有一個「話題」大標，
+// 各塊就傳 false 不要重複
+function TopicBlock({
+  topic,
+  showCategory = true,
+  barColor,
+  titleColor,
+}: {
+  topic: TopicCard;
+  showCategory?: boolean;
+  // 傳給 SectionHeader 的直線顏色；不給就用 SectionHeader 的預設紅色
+  barColor?: string;
+  // 傳給 SectionHeader 的標題文字顏色；不給就用 CSS 預設色
+  titleColor?: string;
+}) {
   const [lead, ...rest] = topic.videos;
 
   return (
     <section className={styles.section}>
       <div className={styles.wrap}>
         <SectionHeader
-          category="話題"
+          category={showCategory ? "話題" : undefined}
           title={topic.title}
           // en="Topic"
           more="更多影片 ›"
           moreUrl={toTopicHref(topic.slug)}
+          barColor={barColor}
+          titleColor={titleColor}
         />
 
         <div className={styles.topicGrid}>
@@ -179,7 +206,11 @@ function TopicBlock({ topic }: { topic: TopicCard }) {
                     />
                   ))
               : Array.from({ length: 4 }).map((_, index) => (
-                  <VideoThumbnail key={index} isLoaded={false} variant={"row"} />
+                  <VideoThumbnail
+                    key={index}
+                    isLoaded={false}
+                    variant={"row"}
+                  />
                 ))}
           </div>
         </div>
@@ -317,26 +348,30 @@ export default function Home() {
       // 清單入口拿不到就整頁維持空狀態（各區塊自己的 fallback 已在下方 render 處理）
       if (!listData) return;
 
+      // API 換結構或回空資料時 sections 可能不存在，統一在這裡收斂成空物件，
+      // 底下各區塊就只會少渲染，不會整頁崩潰
+      const sections = listData.sections ?? {};
+
       // 影音精選：取 main 區塊的第一份清單
-      const featured = listData.sections.main?.items[0];
+      const featured = sections.main?.items?.[0];
       if (featured) {
         fetchFeaturedVideos(featured.apiUrl).then(setMainVideos);
       }
 
       // 話題：topic 區塊底下有幾份清單就渲染幾塊
-      const topicEntries = listData.sections.topic?.items ?? [];
+      const topicEntries = sections.topic?.items ?? [];
       if (topicEntries.length > 0) {
         fetchTopicSections(topicEntries).then(setTopicSections);
       }
 
       // 短影音：取 shorts 區塊的第一份清單
-      const shortsEntry = listData.sections.shorts?.items[0];
+      const shortsEntry = sections.shorts?.items?.[0];
       if (shortsEntry) {
         fetchShortsVideos(shortsEntry.apiUrl).then(setShorts);
       }
 
       // 節目：取 program 區塊的所有清單（內容與 playlist-list/program 相同，不必再打一次）
-      const programSection = listData.sections.program;
+      const programSection = sections.program;
       if (programSection) {
         if (programSection.title) {
           setProgramTitle(programSection.title);
@@ -345,11 +380,11 @@ export default function Home() {
       }
 
       // youtube 直播：取 live 區塊的第一份清單，依其 apiUrl 抓直播資料
-      const liveEntry = listData.sections.youtubeLive?.items[0];
+      const liveEntry = sections.youtubeLive?.items?.[0];
       if (liveEntry) fetchLive().then(setLive);
 
       // 國會直播：取 congress 區塊的第一份清單，依其 apiUrl 抓議程資料
-      const congressEntry = listData.sections.congress?.items[0];
+      const congressEntry = sections.congress?.items?.[0];
       if (congressEntry) {
         fetchCongressLive(congressEntry.apiUrl).then((data) => {
           setCongress(data);
@@ -533,15 +568,31 @@ export default function Home() {
       )}
 
       {/* 話題：後端 topic 區塊有幾份清單就出幾塊；還沒載完先出一塊骨架 */}
-      {topicSections.length !== 0 ? (
-        topicSections.map((topic) => (
-          <TopicBlock key={topic.id ?? topic.title} topic={topic} />
-        ))
-      ) : (
+      {topicSections.length === 0 && (
         <TopicBlock
           topic={{ title: "話題", apiUrl: "", slug: "", videos: [] }}
         />
       )}
+      {topicSections.length > 1 && (
+        <section className={`${styles.section} ${styles.topicGroup}`}>
+          <div className={styles.wrap}>
+            <SectionHeader title="話題" en="Topic" />
+          </div>
+          {/* 多話題時外層已經有一個「話題」大標，各塊自己的上分隔線由 .topicGroup 移除 */}
+          {topicSections.map((topic) => (
+            <TopicBlock
+              key={topic.id ?? topic.title}
+              topic={topic}
+              showCategory={false}
+              barColor="var(--text-mute)"
+            />
+          ))}
+        </section>
+      )}
+      {topicSections.length === 1 &&
+        topicSections.map((topic) => (
+          <TopicBlock key={topic.id ?? topic.title} topic={topic} />
+        ))}
 
       {/*短影音 shorts：載入中顯示提示，載入完但為空則整段隱藏 */}
       <section className={styles.section}>

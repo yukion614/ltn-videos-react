@@ -8,7 +8,13 @@ import { http } from "./http";
 // GET /playlist-list/home → 首頁各區塊（main / youtubeLive / topic / shorts / program / congress）
 export async function fetchHomeList(): Promise<PlaylistListResponse | null> {
   try {
-    const res = await http.get<PlaylistListResponse>("/playlist-list/home");
+    // 路徑可用環境變數覆寫（測試新清單用，例如 /playlist-list/home2），沒設就走正式路徑
+    const res = await http.get<PlaylistListResponse>(
+      process.env.NEXT_PUBLIC_HOME_PLAYLIST_PATH || "/playlist-list/home",
+    );
+    // 測試路徑（如 home2）可能回舊的扁平結構或空資料，沒有 sections 就視同拿不到，
+    // 免得呼叫端存取 sections.xxx 直接整頁崩潰
+    if (!res.data?.sections) return null;
     return res.data;
   } catch {
     // 拿不到就讓呼叫端顯示空狀態，不要整頁掛掉

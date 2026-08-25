@@ -185,6 +185,19 @@
   padding: 0 0 18px;
 }
 
+// 多話題時外層自己是一個 .section（帶上分隔線），裡面每個 TopicBlock 也是 .section，
+// 不移除的話每塊之間都會多一條灰線
+.topicGroup {
+  // 用變數而不是寫死色碼，深色模式才會跟著切（globals.css 的 --surface-2）
+  background: var(--surface-2);
+
+  .section {
+    border-top: 0;
+    padding-bottom: 0;
+    background: transparent; // 底色交給外層 .topicGroup，內層不要再疊一層
+  }
+}
+
 .sectionHeader {
   display: flex;
   align-items: center;
